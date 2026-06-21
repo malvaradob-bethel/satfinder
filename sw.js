@@ -3,11 +3,11 @@
    - SHELL (app + Leaflet): cache-first, se precachea al instalar.
    - TILES (teselas del mapa): cache-first; se guardan al vuelo y vía "Descargar zona".
    Los nombres de caché coinciden con los usados por la página (gestión de caché). */
-const SHELL = 'apsat-shell-v2';
+const SHELL = 'apsat-shell-v3';
 const TILES = 'apsat-tiles-v1';
 
 const SHELL_URLS = [
-  './', './index.html',
+  './', './index.html', './satellites.json',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
@@ -37,6 +37,20 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = req.url;
+
+  // satellites.json -> network-first (para reflejar actualizaciones), caché como respaldo offline
+  if (url.indexOf('satellites.json') !== -1) {
+    e.respondWith((async () => {
+      try {
+        const res = await fetch(req, { cache: 'no-store' });
+        const c = await caches.open(SHELL); c.put('./satellites.json', res.clone());
+        return res;
+      } catch (err) {
+        return (await caches.match('./satellites.json')) || new Response('[]', { headers: { 'Content-Type': 'application/json' } });
+      }
+    })());
+    return;
+  }
 
   // Teselas del mapa -> cache-first, guardando lo que se descarga (incluye respuestas opacas)
   if (isTile(url)) {

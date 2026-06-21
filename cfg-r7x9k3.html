@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Apuntar Sat" />
-<title>Apuntamiento Satelital · Unidad Técnica</title>
+<title>Editor de Contornos · interno</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
@@ -166,7 +166,6 @@
 
   .leaflet-control-attribution{font-size:9px!important;background:rgba(12,17,24,.6)!important;color:#9fb1c7!important}
   .leaflet-control-attribution a{color:#9fb1c7!important}
-  .leaflet-top.leaflet-right{margin-top:calc(env(safe-area-inset-top) + 2px)}
   .leaflet-bar a{background:var(--surf)!important;color:var(--txt)!important;border-color:var(--line)!important}
   .leaflet-control-layers{background:var(--surf)!important;color:var(--txt)!important;border:1px solid var(--line)!important;border-radius:12px!important}
   .vec-label{background:var(--vector);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 7px;border-radius:7px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5);transform:translate(-50%,-160%)}
@@ -181,13 +180,23 @@
 
 <div class="topbar">
   <div class="brand"><span class="dot"></span>
-    <h1>Apuntamiento Satelital<small>Red Nacional · Unidad Técnica</small></h1></div>
+    <h1>Editor de Contornos<small>Trazado de footprints · uso interno</small></h1></div>
   <div class="sp"></div>
+  <div class="iconbtn" id="btnSettings" title="Satélites / Footprints" style="pointer-events:auto">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
+  </div>
 </div>
 
 <div class="offbadge" id="offbadge">Sin conexión · usando mapa en caché</div>
 <div class="hint" id="hint"><b>Toca</b> el mapa para elegir el punto de la antena</div>
 <div class="toast" id="toast"><span id="toastTxt">Descargando…</span><span class="bar"><i id="toastBar"></i></span></div>
+
+<div class="drawbar" id="drawbar">
+  <span class="lbl" id="drawLbl">Traza la cobertura</span>
+  <button id="drawUndo">Deshacer</button>
+  <button class="save" id="drawSave">Guardar</button>
+  <button class="cancel" id="drawCancel">Cancelar</button>
+</div>
 
 <div class="fab-col" id="fabs">
   <div class="fab loc" id="btnLoc" title="Mi ubicación">
@@ -225,10 +234,28 @@
       <div class="compass-info" id="cInfo">Selecciona un punto para calcular la orientación de la antena hacia el satélite.</div>
     </div>
     <div class="cfg" id="cfg"><h3 id="cfgTitle">Configuración del decodificador</h3><div class="grid" id="cfgGrid"></div></div>
-    <p class="note"><b>Cobertura (haz)</b> manda sobre la elevación: aunque el satélite esté sobre el horizonte, solo se capta dentro del footprint.
-      <b>Retransmisión</b> = antena del operador; <b>Doméstico/RX</b> ≈ 2/3 (solo bajar señal). El <b>skew</b> se afina por máxima calidad/MER.</p>
+    <p class="note"><b>Cobertura (haz)</b> manda sobre la elevación: aunque el satélite esté sobre el horizonte, solo se capta dentro del footprint del operador.
+      El aproximado precargado es referencial — importa el contorno real (KMZ/KML/GeoJSON) o dibújalo. El <b>skew</b> se afina por máxima calidad/MER.</p>
   </div>
 </div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mhead"><h2>Satélites y footprints</h2><button class="x" id="mClose">×</button></div>
+    <div class="mbody" id="mBody"></div>
+    <div class="mfoot">
+      <button class="btn ghost" id="mAdd">+ Satélite</button>
+      <button class="btn ghost" id="mReset">Defaults</button>
+      <button class="btn ghost" id="mLoadRepo">Cargar repo</button>
+      <button class="btn primary" id="mSave">Aplicar</button>
+    </div>
+    <div class="mfoot" style="border-top:none;padding-top:0">
+      <button class="btn" id="mCopy">⧉ Copiar JSON</button>
+      <button class="btn primary" id="mDownload" style="background:var(--ok);border-color:var(--ok);color:#06231a">⬇ Descargar satellites.json</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="fpFile" accept=".geojson,.json,.kml,.kmz" style="display:none">
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -260,6 +287,20 @@ const DEFAULTS=[
    cfg:{'Frec. TP':'11990 MHz','Symbol Rate':'2269 Ksym/s','Polaridad':'Vertical','Estándar':'DVB-S2','Modulación':'QPSK 2/3'},
    levels:[lv(46,AMOS_EDGE),lv(50,AMOS_MID),lv(53,AMOS_CORE)],fpApprox:true}
 ];
+const SKEY='apsat.sats.v4';
+function loadSats(){
+  let r=null; try{r=JSON.parse(localStorage.getItem(SKEY));}catch(e){}
+  if(Array.isArray(r)&&r.length)return r.map(normalizeSat);
+  // Migración: refresca niveles de los 3 base, conserva satélites añadidos
+  for(const k of ['apsat.sats.v3','apsat.sats.v2']){
+    let old=null; try{old=JSON.parse(localStorage.getItem(k));}catch(e){}
+    if(Array.isArray(old)&&old.length){
+      const byId=Object.fromEntries(DEFAULTS.map(d=>[d.id,d]));
+      return old.map(s=>{const d=byId[s.id];return d?{...s,color:d.color,levels:JSON.parse(JSON.stringify(d.levels)),fpApprox:d.fpApprox}:normalizeSat(s);});
+    }
+  }
+  return JSON.parse(JSON.stringify(DEFAULTS));
+}
 // Compatibilidad: footprint único -> un solo nivel sin dbw
 function normalizeSat(s){
   if(s.levels)return s;
@@ -267,19 +308,14 @@ function normalizeSat(s){
   else s.levels=[];
   return s;
 }
-let SATS=JSON.parse(JSON.stringify(DEFAULTS)).map(normalizeSat); // respaldo embebido (offline / file://)
+function saveSats(){localStorage.setItem(SKEY,JSON.stringify(SATS));}
+let SATS=loadSats();
 let active=0, pt=null;
-// Los contornos se administran en el editor y se publican en satellites.json
-async function loadSatellites(){
-  try{const r=await fetch('satellites.json',{cache:'no-cache'});
-    if(r.ok){const d=await r.json();const arr=Array.isArray(d)?d:d.satellites;
-      if(Array.isArray(arr)&&arr.length)SATS=arr.map(normalizeSat);}}catch(e){}
-}
 const MIN_EL=5; // elevación mínima práctica (°)
 
 /* ===================== Mapa ===================== */
 const map=L.map('map',{zoomControl:false}).setView([-9.2,-75],5);
-L.control.zoom({position:'topright'}).addTo(map);
+L.control.zoom({position:'topleft'}).addTo(map);
 const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/';
 const street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
 const sat=L.tileLayer(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© Esri'});
@@ -297,7 +333,7 @@ const vectors=L.layerGroup().addTo(map);
 L.control.layers(
   {'Satélite':hybrid,'Satélite (sin texto)':sat2,'Calles':street,'Topográfico':topo,'Relieve':relief,'Oscuro':dark,'Claro':light,'NatGeo':natgeo},
   {'Cobertura (haz)':footLayer,'Límite geométrico':visLayer},
-  {position:'topright',collapsed:true}
+  {position:'topleft',collapsed:true}
 ).addTo(map);
 let marker=null;
 
@@ -498,8 +534,8 @@ function setPoint(lat,lng){
   updateCoord(); render();
 }
 function updateCoord(){document.getElementById('coordTxt').textContent=`${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}`;}
-map.on('click',e=>setPoint(e.latlng.lat,e.latlng.lng));
-map.on('zoomend moveend',()=>{if(pt)render();});
+map.on('click',e=>{ if(drawMode){addDrawPoint(e.latlng);} else setPoint(e.latlng.lat,e.latlng.lng); });
+map.on('zoomend moveend',()=>{if(pt&&!drawMode)render();});
 document.getElementById('copyCoord').onclick=()=>{if(!pt)return;
   navigator.clipboard?.writeText(`${pt.lat.toFixed(6)}, ${pt.lng.toFixed(6)}`);
   const b=document.getElementById('copyCoord');b.textContent='✓';setTimeout(()=>b.textContent='copiar',1200);};
@@ -524,6 +560,93 @@ document.getElementById('grip').onclick=()=>{
   sheet.classList.toggle('collapsed');
   document.getElementById('fabs').style.bottom=sheet.classList.contains('collapsed')?'134px':'calc(46vh + 14px)';
   setTimeout(()=>map.invalidateSize(),260);
+};
+
+/* ===================== Dibujar footprint ===================== */
+let drawMode=false, drawIdx=-1, drawLvl=0, drawPts=[], drawLine=null, drawMarkers=L.layerGroup();
+const drawbar=document.getElementById('drawbar');
+function enterDraw(idx,lvl){
+  SATS=collectDraft(); saveSats();
+  drawIdx=idx; drawLvl=lvl; drawMode=true; drawPts=[];
+  drawMarkers.addTo(map); drawMarkers.clearLayers();
+  if(drawLine){map.removeLayer(drawLine);drawLine=null;}
+  closeModal();
+  const lab=(SATS[idx].levels[lvl]&&SATS[idx].levels[lvl].dbw!=null)?` · ${SATS[idx].levels[lvl].dbw} dBW`:'';
+  document.getElementById('drawLbl').textContent=`Traza ${SATS[idx].name}${lab}`;
+  drawbar.classList.add('show');
+  const cur=SATS[idx].levels[lvl]&&SATS[idx].levels[lvl].geom;
+  if(cur){const g=cur; const ring=(g.type==='Polygon'?g.coordinates[0]:g.coordinates[0][0])||[];
+    ring.slice(0,-1).forEach(c=>addDrawPoint(L.latLng(c[1],c[0])));}
+}
+function addDrawPoint(latlng){
+  drawPts.push(latlng);
+  L.circleMarker(latlng,{radius:4,color:'#fff',fillColor:SATS[drawIdx].color,fillOpacity:1,weight:1.5}).addTo(drawMarkers);
+  redrawDrawLine();
+}
+function redrawDrawLine(){
+  if(drawLine)map.removeLayer(drawLine);
+  if(drawPts.length>=2)drawLine=L.polygon(drawPts,{color:SATS[drawIdx].color,weight:2,opacity:.95,fillOpacity:.12,dashArray:'5 5'}).addTo(map);
+}
+function exitDraw(){drawMode=false;drawbar.classList.remove('show');drawMarkers.clearLayers();
+  if(drawLine){map.removeLayer(drawLine);drawLine=null;}}
+document.getElementById('drawUndo').onclick=()=>{drawPts.pop();
+  drawMarkers.clearLayers();drawPts.forEach(ll=>L.circleMarker(ll,{radius:4,color:'#fff',fillColor:SATS[drawIdx].color,fillOpacity:1,weight:1.5}).addTo(drawMarkers));
+  redrawDrawLine();};
+document.getElementById('drawSave').onclick=()=>{
+  if(drawPts.length<3){alert('Marca al menos 3 puntos.');return;}
+  const ring=drawPts.map(ll=>[ll.lng,ll.lat]); ring.push(ring[0]);
+  if(!SATS[drawIdx].levels[drawLvl])SATS[drawIdx].levels[drawLvl]={dbw:null,geom:null};
+  SATS[drawIdx].levels[drawLvl].geom={type:'Polygon',coordinates:[ring]}; SATS[drawIdx].fpApprox=false;
+  saveSats(); exitDraw(); renderFootprints(); render(); openModal();
+};
+document.getElementById('drawCancel').onclick=()=>{exitDraw();openModal();};
+
+/* ===================== Importar footprint ===================== */
+let importIdx=-1, importLvl=0;
+const fpFile=document.getElementById('fpFile');
+function geojsonToGeom(obj){const polys=[];
+  const add=g=>{if(!g)return;if(g.type==='Polygon')polys.push(g.coordinates);else if(g.type==='MultiPolygon')g.coordinates.forEach(p=>polys.push(p));};
+  if(obj.type==='FeatureCollection')obj.features.forEach(f=>add(f.geometry));
+  else if(obj.type==='Feature')add(obj.geometry); else add(obj);
+  if(!polys.length)return null;
+  return polys.length===1?{type:'Polygon',coordinates:polys[0]}:{type:'MultiPolygon',coordinates:polys};}
+function kmlToGeom(text){
+  const xml=new DOMParser().parseFromString(text,'text/xml');
+  const polyEls=[...xml.getElementsByTagName('Polygon')],polys=[];
+  const ring=el=>{const c=el.getElementsByTagName('coordinates')[0];if(!c)return null;
+    return c.textContent.trim().split(/\s+/).map(p=>{const a=p.split(',');return [parseFloat(a[0]),parseFloat(a[1])];}).filter(p=>isFinite(p[0])&&isFinite(p[1]));};
+  polyEls.forEach(pe=>{const rings=[];
+    const o=pe.getElementsByTagName('outerBoundaryIs')[0];
+    if(o){const r=ring(o);if(r&&r.length>2)rings.push(r);}
+    [...pe.getElementsByTagName('innerBoundaryIs')].forEach(ie=>{const r=ring(ie);if(r&&r.length>2)rings.push(r);});
+    if(rings.length)polys.push(rings);});
+  if(!polys.length)return null;
+  return polys.length===1?{type:'Polygon',coordinates:polys[0]}:{type:'MultiPolygon',coordinates:polys};}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+async function parseFootprintFile(file){
+  const name=(file.name||'').toLowerCase();
+  if(name.endsWith('.kmz')){
+    if(typeof JSZip==='undefined'){try{await loadScript('https://unpkg.com/jszip@3.10.1/dist/jszip.min.js');}catch(e){throw new Error('No se pudo cargar el lector KMZ (¿sin conexión?).');}}
+    const zip=await JSZip.loadAsync(file);
+    const kmlName=Object.keys(zip.files).find(n=>n.toLowerCase().endsWith('.kml'));
+    if(!kmlName)throw new Error('El KMZ no contiene un .kml');
+    return kmlToGeom(await zip.files[kmlName].async('string'));
+  }
+  const text=await file.text();
+  if(name.endsWith('.kml'))return kmlToGeom(text);
+  return geojsonToGeom(JSON.parse(text));
+}
+fpFile.onchange=async()=>{
+  const f=fpFile.files[0]; if(!f||importIdx<0)return;
+  try{
+    const g=await parseFootprintFile(f);
+    if(!g||!fpVertices(g))throw new Error('No se encontró un polígono de cobertura en el archivo.');
+    draft=collectDraft();
+    if(!draft[importIdx].levels[importLvl])draft[importIdx].levels[importLvl]={dbw:null,geom:null};
+    draft[importIdx].levels[importLvl].geom=g; draft[importIdx].fpApprox=false;
+    renderModal();
+  }catch(e){alert('Error al importar: '+e.message);}
+  fpFile.value='';
 };
 
 /* ===================== Descargar zona (offline) ===================== */
@@ -563,6 +686,104 @@ const offbadge=document.getElementById('offbadge');
 function updNet(){offbadge.classList.toggle('show',!navigator.onLine);}
 window.addEventListener('online',updNet);window.addEventListener('offline',updNet);updNet();
 
+/* ===================== Gestor de satélites ===================== */
+const overlay=document.getElementById('overlay'),mBody=document.getElementById('mBody');
+let draft=[];
+function cfgToText(cfg){return Object.entries(cfg||{}).map(([k,v])=>`${k}: ${v}`).join('\n');}
+function textToCfg(t){const o={};(t||'').split('\n').forEach(line=>{const i=line.indexOf(':');
+  if(i>0){const k=line.slice(0,i).trim(),v=line.slice(i+1).trim();if(k)o[k]=v;}});return o;}
+function satCardHTML(s,idx){
+  const levels=s.levels||[];
+  const lvHTML=levels.map((L,li)=>`<div class="lvrow">
+      <input class="lvdbw" data-dbw="${li}" type="number" step="1" placeholder="dBW" value="${L.dbw!=null?L.dbw:''}">
+      <span class="lvinfo ${L.geom?'ok':'none'}">${L.geom?fpVertices(L.geom)+' vért':'sin trazo'}</span>
+      <button data-draw="${idx}:${li}">Dibujar</button>
+      <button data-imp="${idx}:${li}">Importar</button>
+      <button class="clr" data-clr="${idx}:${li}" title="Quitar nivel">×</button>
+    </div>`).join('');
+  return `<div class="satcard" data-idx="${idx}">
+    <div class="sc-head"><span class="swatch" style="background:${s.color}"></span><strong>Satélite ${idx+1}</strong>
+      <button class="del" data-del="${idx}" title="Eliminar">🗑</button></div>
+    <div class="two">
+      <div class="fld"><label>Nombre</label><input data-f="name" value="${(s.name||'').replace(/"/g,'&quot;')}"></div>
+      <div class="fld"><label>Color</label><input type="color" data-f="color" value="${s.color||'#ff1f3d'}"></div></div>
+    <div class="fld"><label>Longitud orbital (° · negativo = Oeste)</label>
+      <input data-f="lon" type="number" step="0.1" value="${s.lon}">
+      <span class="hintline">Ej: Amazonas 5 = -61 · Amos 17 = 17</span></div>
+    <div class="fld"><label>Parámetros del decodificador («Clave: Valor» por línea)</label>
+      <textarea data-f="cfg">${cfgToText(s.cfg)}</textarea>
+      <span class="hintline">Puedes listar varios TP en líneas distintas.</span></div>
+    <div class="fpbox">
+      <div class="fphead">Niveles de cobertura (EIRP en dBW)${s.fpApprox?' · <span class="fpstat approx">aprox</span>':''}</div>
+      ${lvHTML}
+      <button class="addlv" data-addlv="${idx}">+ Añadir nivel</button>
+      <span class="hintline">Contorno interior = mayor dBW = antena más pequeña. Deja dBW vacío para un contorno único sin nivel.</span>
+    </div>
+  </div>`;
+}
+function renderModal(){
+  mBody.innerHTML=draft.map(satCardHTML).join('')
+    +`<div class="cacheline">Mapa offline: <b id="cacheCount">…</b> teselas<button id="cacheClear">Vaciar</button></div>`;
+  const D2=s=>s.split(':').map(Number);
+  mBody.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{draft=collectDraft();draft.splice(+b.dataset.del,1);renderModal();});
+  mBody.querySelectorAll('[data-addlv]').forEach(b=>b.onclick=()=>{draft=collectDraft();(draft[+b.dataset.addlv].levels||(draft[+b.dataset.addlv].levels=[])).push({dbw:null,geom:null});renderModal();});
+  mBody.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{draft=collectDraft();[importIdx,importLvl]=D2(b.dataset.imp);fpFile.click();});
+  mBody.querySelectorAll('[data-draw]').forEach(b=>b.onclick=()=>{const[i,l]=D2(b.dataset.draw);enterDraw(i,l);});
+  mBody.querySelectorAll('[data-clr]').forEach(b=>b.onclick=()=>{draft=collectDraft();const[i,l]=D2(b.dataset.clr);draft[i].levels.splice(l,1);renderModal();});
+  refreshCacheCount();
+  document.getElementById('cacheClear').onclick=async()=>{if(!confirm('¿Borrar el mapa guardado sin conexión?'))return;
+    try{await caches.delete('apsat-tiles-v1');}catch(e){}refreshCacheCount();};
+}
+function collectDraft(){
+  return [...mBody.querySelectorAll('.satcard')].map(card=>{
+    const g=f=>card.querySelector(`[data-f="${f}"]`).value;
+    const prev=draft[+card.dataset.idx]||{};
+    const prevLv=prev.levels||[];
+    const levels=[...card.querySelectorAll('.lvdbw')].map(inp=>{
+      const li=+inp.dataset.dbw, v=inp.value.trim();
+      return {dbw:v===''?null:parseFloat(v), geom:(prevLv[li]&&prevLv[li].geom)||null};
+    });
+    return {id:prev.id||'s'+Math.random().toString(36).slice(2,7),name:g('name')||'Satélite',
+      lon:parseFloat(g('lon'))||0,color:g('color')||'#ff1f3d',cfg:textToCfg(g('cfg')),
+      levels,fpApprox:!!prev.fpApprox};
+  });
+}
+async function refreshCacheCount(){const el=document.getElementById('cacheCount');if(!el)return;
+  try{const c=await caches.open('apsat-tiles-v1');const k=await c.keys();el.textContent=k.length;}catch(e){el.textContent='0';}}
+function openModal(){draft=JSON.parse(JSON.stringify(SATS));renderModal();overlay.classList.add('show');}
+function closeModal(){overlay.classList.remove('show');}
+document.getElementById('btnSettings').onclick=openModal;
+document.getElementById('mClose').onclick=closeModal;
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal();});
+document.getElementById('mAdd').onclick=()=>{draft=collectDraft();
+  draft.push({id:'new'+Math.random().toString(36).slice(2,6),name:'Nuevo satélite',lon:0,color:'#8b5cf6',cfg:{'Frec. TP':'','Symbol Rate':'','Polaridad':'Horizontal'},footprint:null,fpApprox:false});renderModal();};
+document.getElementById('mReset').onclick=()=>{if(confirm('¿Restablecer los 3 satélites por defecto (footprints aproximados incluidos)?')){draft=JSON.parse(JSON.stringify(DEFAULTS));renderModal();}};
+document.getElementById('mSave').onclick=()=>{const d=collectDraft();if(!d.length){alert('Agrega al menos un satélite.');return;}
+  SATS=d;saveSats();if(active>=SATS.length)active=0;renderTabs();renderFootprints();render();closeModal();};
+
+/* ===================== Repositorio JSON (cargar / exportar) ===================== */
+async function fetchRepoJSON(){
+  try{const r=await fetch('satellites.json',{cache:'no-cache'});
+    if(r.ok){const d=await r.json();const arr=Array.isArray(d)?d:d.satellites;
+      if(Array.isArray(arr)&&arr.length)return arr.map(normalizeSat);}}catch(e){}
+  return null;
+}
+function buildJSON(){
+  return JSON.stringify({version:1,updated:new Date().toISOString().slice(0,10),
+    satellites:SATS.map(s=>({id:s.id,name:s.name,lon:s.lon,color:s.color,cfg:s.cfg||{},
+      levels:(s.levels||[]).filter(L=>L.geom).map(L=>({dbw:L.dbw==null?null:L.dbw,geom:L.geom}))}))},null,1);
+}
+document.getElementById('mDownload').onclick=()=>{const blob=new Blob([buildJSON()],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='satellites.json';a.click();};
+document.getElementById('mCopy').onclick=()=>{navigator.clipboard?.writeText(buildJSON());
+  const b=document.getElementById('mCopy');b.textContent='✓ Copiado';setTimeout(()=>b.textContent='⧉ Copiar JSON',1300);};
+document.getElementById('mLoadRepo').onclick=async()=>{
+  if(!confirm('Cargar satellites.json del repositorio (reemplaza la edición actual)?'))return;
+  const j=await fetchRepoJSON();
+  if(j){SATS=j;saveSats();if(active>=SATS.length)active=0;renderTabs();renderFootprints();render();renderModal();}
+  else alert('No se encontró satellites.json (¿estás sirviendo por http?).');
+};
+
 /* ===================== PWA + SW ===================== */
 (function(){try{
   const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');
@@ -581,7 +802,11 @@ window.addEventListener('online',updNet);window.addEventListener('offline',updNe
 if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
 
 /* init */
-(async()=>{ await loadSatellites(); renderTabs(); renderFootprints(); render(); })();
+renderTabs(); renderFootprints(); render();
+(async()=>{
+  let hasLocal=false; try{hasLocal=!!localStorage.getItem(SKEY);}catch(e){}
+  if(!hasLocal){const j=await fetchRepoJSON(); if(j){SATS=j;renderTabs();renderFootprints();render();}}
+})();
 </script>
 </body>
 </html>
