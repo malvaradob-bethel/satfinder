@@ -248,33 +248,38 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* ===================== Footprints aproximados (referenciales) ===================== */
-const FP_AMER_TELSTAR=[[-138,58],[-52,58],[-35,12],[-30,-8],[-45,-40],[-75,-56],[-98,-38],[-95,8],[-115,28],[-132,46],[-138,58]];
-const FP_AMER_AMAZ=[[-120,40],[-55,40],[-33,6],[-37,-28],[-62,-56],[-80,-56],[-84,-6],[-104,14],[-120,32],[-120,40]];
-const FP_AFRICA=[[-20,38],[16,40],[40,32],[54,14],[52,-14],[33,-36],[14,-36],[6,-10],[-14,6],[-20,24],[-20,38]];
-const poly=r=>({type:'Polygon',coordinates:[r]});
+// Footprints trazados del contorno exterior útil de cada haz (Satbeams / fichas de operador)
+// Amazonas 5 (61W) — Ku Latin America: Centroamérica + Sudamérica andina/sur, excluye centro-este de Brasil
+const FP_AMER_AMAZ=[[-106,22],[-100,18],[-93,15],[-86,11],[-79,9],[-76,11],[-71,12],[-66,11],[-61,9],[-58,5],[-57,1],[-58,-5],[-58,-11],[-57,-18],[-55,-25],[-54,-31],[-54,-35],[-59,-42],[-65,-50],[-69,-55],[-76,-54],[-82,-45],[-84,-30],[-84,-18],[-85,-8],[-86,0],[-90,8],[-96,14],[-102,19]];
+// Telstar 12V (15W) — Pan American Ku: ambas Américas (este de Norteamérica + toda Sudamérica)
+const FP_AMER_TELSTAR=[[-104,46],[-98,50],[-82,49],[-68,47],[-55,44],[-46,28],[-40,12],[-35,-3],[-33,-18],[-34,-30],[-44,-44],[-58,-55],[-70,-55],[-79,-44],[-82,-28],[-83,-12],[-85,0],[-90,10],[-98,17],[-107,24],[-113,32],[-110,40]];
+// Amos 17 (17E) — Ku-1: África Occidental y Central
+const FP_AFRICA=[[-18,16],[-6,17],[8,18],[18,16],[26,12],[31,6],[33,0],[31,-6],[28,-12],[22,-14],[14,-12],[9,-3],[3,4],[-7,5],[-15,9],[-18,13]];
+const poly=r=>{const c=r.slice();if(c.length&&(c[0][0]!==c[c.length-1][0]||c[0][1]!==c[c.length-1][1]))c.push(c[0]);return {type:'Polygon',coordinates:[c]};};
 
 const DEFAULTS=[
   {id:'amazonas5',name:'Amazonas 5',lon:-61.0,color:'#1ec9d4',
    cfg:{'Frec. TP':'12430 MHz','Symbol Rate':'30000 Ksym/s','Polaridad':'Horizontal','Estándar':'DVB-S2','Modulación':'QPSK 5/6','Pilots':'Off'},
-   footprint:poly(FP_AMER_AMAZ),fpApprox:true},
+   footprint:poly(FP_AMER_AMAZ),fpApprox:false},
   {id:'telstar12v',name:'Telstar 12V',lon:-15.0,color:'#e84bcf',
    cfg:{'Frec. TP':'11800 MHz','Symbol Rate':'45000 Ksym/s','Polaridad':'Horizontal','Estándar':'DVB-S2','Modulación':'QPSK 4/5'},
-   footprint:poly(FP_AMER_TELSTAR),fpApprox:true},
+   footprint:poly(FP_AMER_TELSTAR),fpApprox:false},
   {id:'amos17',name:'Amos 17',lon:17.0,color:'#1aa97b',
    cfg:{'Frec. TP':'11990 MHz','Symbol Rate':'2269 Ksym/s','Polaridad':'Vertical','Estándar':'DVB-S2','Modulación':'QPSK 2/3'},
-   footprint:poly(FP_AFRICA),fpApprox:true}
+   footprint:poly(FP_AFRICA),fpApprox:false}
 ];
-const SKEY='apsat.sats.v2';
-// Migra colores antiguos -> nuevos solo si no fueron personalizados (conserva footprints)
-const COLOR_FIX={amazonas5:['#f5b301','#1ec9d4'],telstar12v:['#ff5a4d','#e84bcf'],amos17:['#2f9be0','#1aa97b']};
+const SKEY='apsat.sats.v3';
 function loadSats(){
-  let r=null;
-  try{r=JSON.parse(localStorage.getItem(SKEY));}catch(e){}
-  if(!Array.isArray(r)||!r.length)return JSON.parse(JSON.stringify(DEFAULTS));
-  let changed=false;
-  r.forEach(s=>{const f=COLOR_FIX[s.id];if(f&&s.color===f[0]){s.color=f[1];changed=true;}});
-  if(changed)try{localStorage.setItem(SKEY,JSON.stringify(r));}catch(e){}
-  return r;
+  let r=null; try{r=JSON.parse(localStorage.getItem(SKEY));}catch(e){}
+  if(Array.isArray(r)&&r.length)return r;
+  // Migración desde v2: conserva satélites añadidos por el usuario y
+  // refresca color + footprint real de los 3 satélites base.
+  let old=null; try{old=JSON.parse(localStorage.getItem('apsat.sats.v2'));}catch(e){}
+  if(Array.isArray(old)&&old.length){
+    const byId=Object.fromEntries(DEFAULTS.map(d=>[d.id,d]));
+    return old.map(s=>{const d=byId[s.id];return d?{...s,color:d.color,footprint:d.footprint,fpApprox:d.fpApprox}:s;});
+  }
+  return JSON.parse(JSON.stringify(DEFAULTS));
 }
 function saveSats(){localStorage.setItem(SKEY,JSON.stringify(SATS));}
 let SATS=loadSats();
