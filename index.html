@@ -149,6 +149,13 @@
   .fpbtns{display:flex;gap:7px;flex-wrap:wrap}
   .fpbtns button{flex:1;min-width:84px;border:1px solid var(--line);background:var(--surf);color:var(--txt);border-radius:9px;padding:8px;font-size:11.5px;font-weight:600;cursor:pointer}
   .fpbtns button.clr{color:var(--bad)}
+  .lvrow{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+  .lvrow .lvdbw{width:66px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font-family:var(--mono);font-size:12px;padding:6px 7px;text-align:center}
+  .lvrow .lvinfo{font-family:var(--mono);font-size:10px;min-width:52px}
+  .lvrow .lvinfo.ok{color:var(--ok)} .lvrow .lvinfo.none{color:var(--muted2)}
+  .lvrow button{flex:1;border:1px solid var(--line);background:var(--surf);color:var(--txt);border-radius:8px;padding:6px 4px;font-size:11px;font-weight:600;cursor:pointer}
+  .lvrow button.clr{flex:none;width:30px;color:var(--bad)}
+  .addlv{width:100%;border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:7px;font-size:11.5px;font-weight:600;cursor:pointer;margin-top:2px}
   .mfoot{display:flex;gap:9px;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
   .btn{flex:1;min-width:120px;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:var(--surf);color:var(--txt)}
   .btn.primary{background:var(--vector);border-color:var(--vector);color:#fff}
@@ -247,39 +254,54 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-/* ===================== Footprints aproximados (referenciales) ===================== */
-// Footprints trazados del contorno exterior útil de cada haz (Satbeams / fichas de operador)
-// Amazonas 5 (61W) — Ku Latin America: Centroamérica + Sudamérica andina/sur, excluye centro-este de Brasil
-const FP_AMER_AMAZ=[[-106,22],[-100,18],[-93,15],[-86,11],[-79,9],[-76,11],[-71,12],[-66,11],[-61,9],[-58,5],[-57,1],[-58,-5],[-58,-11],[-57,-18],[-55,-25],[-54,-31],[-54,-35],[-59,-42],[-65,-50],[-69,-55],[-76,-54],[-82,-45],[-84,-30],[-84,-18],[-85,-8],[-86,0],[-90,8],[-96,14],[-102,19]];
-// Telstar 12V (15W) — Pan American Ku: ambas Américas (este de Norteamérica + toda Sudamérica)
-const FP_AMER_TELSTAR=[[-104,46],[-98,50],[-82,49],[-68,47],[-55,44],[-46,28],[-40,12],[-35,-3],[-33,-18],[-34,-30],[-44,-44],[-58,-55],[-70,-55],[-79,-44],[-82,-28],[-83,-12],[-85,0],[-90,10],[-98,17],[-107,24],[-113,32],[-110,40]];
-// Amos 17 (17E) — Ku-1: África Occidental y Central
-const FP_AFRICA=[[-18,16],[-6,17],[8,18],[18,16],[26,12],[31,6],[33,0],[31,-6],[28,-12],[22,-14],[14,-12],[9,-3],[3,4],[-7,5],[-15,9],[-18,13]];
+/* ===================== Footprints multinivel (contornos EIRP por dBW) ===================== */
 const poly=r=>{const c=r.slice();if(c.length&&(c[0][0]!==c[c.length-1][0]||c[0][1]!==c[c.length-1][1]))c.push(c[0]);return {type:'Polygon',coordinates:[c]};};
+// Contornos trazados de las fichas/Satbeams. dbw = EIRP aproximado del contorno.
+// Amazonas 5 (61W) — Ku Latin America (Hispasat)
+const AMAZ_EDGE=[[-106,22],[-100,18],[-93,15],[-86,11],[-79,9],[-76,11],[-71,12],[-66,11],[-61,9],[-58,5],[-57,1],[-58,-5],[-58,-11],[-57,-18],[-55,-25],[-54,-31],[-54,-35],[-59,-42],[-65,-50],[-69,-55],[-76,-54],[-82,-45],[-84,-30],[-84,-18],[-85,-8],[-86,0],[-90,8],[-96,14],[-102,19]];
+const AMAZ_MID=[[-99,16],[-90,13],[-83,10],[-77,10],[-71,11],[-66,9],[-62,4],[-63,-3],[-66,-10],[-70,-18],[-71,-26],[-73,-33],[-78,-38],[-82,-30],[-84,-18],[-85,-8],[-86,0],[-90,8],[-95,13]];
+const AMAZ_CORE=[[-82,10],[-76,11],[-70,10],[-66,6],[-66,1],[-69,-4],[-74,-7],[-79,-6],[-82,0],[-83,5]];
+// Telstar 12V (15W) — Pan American Ku (Telesat)
+const TEL_EDGE=[[-104,46],[-98,50],[-82,49],[-68,47],[-55,44],[-46,28],[-40,12],[-35,-3],[-33,-18],[-34,-30],[-44,-44],[-58,-55],[-70,-55],[-79,-44],[-82,-28],[-83,-12],[-85,0],[-90,10],[-98,17],[-107,24],[-113,32],[-110,40]];
+const TEL_MID=[[-83,4],[-73,11],[-62,11],[-52,7],[-44,2],[-42,-7],[-46,-17],[-55,-24],[-67,-26],[-77,-20],[-82,-8]];
+const TEL_CORE=[[-70,9],[-60,10],[-50,7],[-44,1],[-46,-6],[-54,-9],[-63,-8],[-70,-1]];
+// Amos 17 (17E) — Ku-1 África Occidental/Central (Spacecom)
+const AMOS_EDGE=[[-18,16],[-6,17],[8,18],[18,16],[26,12],[31,6],[33,0],[31,-6],[28,-12],[22,-14],[14,-12],[9,-3],[3,4],[-7,5],[-15,9],[-18,13]];
+const AMOS_MID=[[-13,12],[-2,13],[8,12],[16,9],[20,3],[19,-4],[14,-9],[8,-8],[1,-3],[-6,2],[-12,8]];
+const AMOS_CORE=[[1,10],[8,10],[14,6],[16,1],[13,-4],[7,-5],[1,-1],[-2,4]];
+const lv=(dbw,ring)=>({dbw,geom:poly(ring)});
 
 const DEFAULTS=[
   {id:'amazonas5',name:'Amazonas 5',lon:-61.0,color:'#1ec9d4',
    cfg:{'Frec. TP':'12430 MHz','Symbol Rate':'30000 Ksym/s','Polaridad':'Horizontal','Estándar':'DVB-S2','Modulación':'QPSK 5/6','Pilots':'Off'},
-   footprint:poly(FP_AMER_AMAZ),fpApprox:false},
+   levels:[lv(43,AMAZ_EDGE),lv(47,AMAZ_MID),lv(50,AMAZ_CORE)],fpApprox:true},
   {id:'telstar12v',name:'Telstar 12V',lon:-15.0,color:'#e84bcf',
    cfg:{'Frec. TP':'11800 MHz','Symbol Rate':'45000 Ksym/s','Polaridad':'Horizontal','Estándar':'DVB-S2','Modulación':'QPSK 4/5'},
-   footprint:poly(FP_AMER_TELSTAR),fpApprox:false},
+   levels:[lv(44,TEL_EDGE),lv(49,TEL_MID),lv(50,TEL_CORE)],fpApprox:true},
   {id:'amos17',name:'Amos 17',lon:17.0,color:'#1aa97b',
    cfg:{'Frec. TP':'11990 MHz','Symbol Rate':'2269 Ksym/s','Polaridad':'Vertical','Estándar':'DVB-S2','Modulación':'QPSK 2/3'},
-   footprint:poly(FP_AFRICA),fpApprox:false}
+   levels:[lv(46,AMOS_EDGE),lv(50,AMOS_MID),lv(53,AMOS_CORE)],fpApprox:true}
 ];
-const SKEY='apsat.sats.v3';
+const SKEY='apsat.sats.v4';
 function loadSats(){
   let r=null; try{r=JSON.parse(localStorage.getItem(SKEY));}catch(e){}
-  if(Array.isArray(r)&&r.length)return r;
-  // Migración desde v2: conserva satélites añadidos por el usuario y
-  // refresca color + footprint real de los 3 satélites base.
-  let old=null; try{old=JSON.parse(localStorage.getItem('apsat.sats.v2'));}catch(e){}
-  if(Array.isArray(old)&&old.length){
-    const byId=Object.fromEntries(DEFAULTS.map(d=>[d.id,d]));
-    return old.map(s=>{const d=byId[s.id];return d?{...s,color:d.color,footprint:d.footprint,fpApprox:d.fpApprox}:s;});
+  if(Array.isArray(r)&&r.length)return r.map(normalizeSat);
+  // Migración: refresca niveles de los 3 base, conserva satélites añadidos
+  for(const k of ['apsat.sats.v3','apsat.sats.v2']){
+    let old=null; try{old=JSON.parse(localStorage.getItem(k));}catch(e){}
+    if(Array.isArray(old)&&old.length){
+      const byId=Object.fromEntries(DEFAULTS.map(d=>[d.id,d]));
+      return old.map(s=>{const d=byId[s.id];return d?{...s,color:d.color,levels:JSON.parse(JSON.stringify(d.levels)),fpApprox:d.fpApprox}:normalizeSat(s);});
+    }
   }
   return JSON.parse(JSON.stringify(DEFAULTS));
+}
+// Compatibilidad: footprint único -> un solo nivel sin dbw
+function normalizeSat(s){
+  if(s.levels)return s;
+  if(s.footprint){s.levels=[{dbw:null,geom:s.footprint}];delete s.footprint;}
+  else s.levels=[];
+  return s;
 }
 function saveSats(){localStorage.setItem(SKEY,JSON.stringify(SATS));}
 let SATS=loadSats();
@@ -356,23 +378,42 @@ function pointInGeom(lng,lat,g){
 }
 function fpVertices(g){if(!g)return 0;const ps=g.type==='MultiPolygon'?g.coordinates:[g.coordinates];
   return ps.reduce((n,p)=>n+(p[0]?p[0].length-1:0),0);}
+function polyArea(g){if(!g)return 0;const ps=g.type==='MultiPolygon'?g.coordinates:[g.coordinates];
+  let a=0;for(const p of ps){const r=p[0]||[];for(let i=0,j=r.length-1;i<r.length;j=i++)a+=(r[j][0]*r[i][1]-r[i][0]*r[j][1]);}return Math.abs(a/2);}
+// Evalúa cobertura multinivel: devuelve el nivel más interno (menor área) que contiene el punto
+function evalCoverage(lng,lat,levels){
+  if(!levels||!levels.length)return {state:'none'};
+  const inside=levels.filter(L=>pointInGeom(lng,lat,L.geom)===true);
+  if(!inside.length)return {state:'out'};
+  inside.sort((a,b)=>polyArea(a.geom)-polyArea(b.geom));
+  return {state:'in',best:inside[0]};
+}
+// Antena Ku sugerida según EIRP (orientativo, sin margen de lluvia/disponibilidad)
+function antenaFor(dbw){
+  if(dbw==null)return null;
+  if(dbw>=50)return '0.6 – 0.75 m';
+  if(dbw>=47)return '0.9 m';
+  if(dbw>=44)return '1.2 m';
+  if(dbw>=41)return '1.8 m';
+  return '≥ 2.4 m (marginal)';
+}
 
 /* ===================== Render mapa ===================== */
 function renderFootprints(){
   footLayer.clearLayers(); visLayer.clearLayers();
   SATS.forEach((s,i)=>{
     const on=i===active;
-    if(s.footprint){
-      try{
-        L.geoJSON(s.footprint,{style:{color:s.color,weight:on?2.5:1.4,opacity:on?.95:.5,
-          fillColor:s.color,fillOpacity:on?.16:.07,dashArray:s.fpApprox?'6 6':null}}).addTo(footLayer);
-      }catch(e){}
-      // etiqueta
-      try{const b=L.geoJSON(s.footprint).getBounds();const c=b.getCenter();
-        L.marker(c,{interactive:false,icon:L.divIcon({className:'',html:`<div class="fp-tag" style="--sat:${s.color}">${s.name}${s.fpApprox?' (aprox)':''}</div>`,iconSize:[0,0]})}).addTo(footLayer);
-      }catch(e){}
+    const levels=(s.levels||[]).slice().sort((a,b)=>polyArea(b.geom)-polyArea(a.geom)); // exterior -> interior
+    levels.forEach((L,k)=>{
+      const t=levels.length>1?k/(levels.length-1):0; // 0 exterior, 1 interior
+      const fo=(on?0.10:0.05)+t*(on?0.22:0.12);
+      try{L.geoJSON(L.geom,{style:{color:s.color,weight:on?(1+t):0.8,opacity:on?.85:.4,
+        fillColor:s.color,fillOpacity:fo,dashArray:s.fpApprox&&k===0?'6 6':null}}).addTo(footLayer);}catch(e){}
+    });
+    if(levels.length){ // etiqueta sobre el contorno exterior
+      try{const c=L.geoJSON(levels[0].geom).getBounds().getCenter();
+        L.marker(c,{interactive:false,icon:L.divIcon({className:'',html:`<div class="fp-tag" style="--sat:${s.color}">${s.name}${s.fpApprox?' (aprox)':''}</div>`,iconSize:[0,0]})}).addTo(footLayer);}catch(e){}
     }
-    // límite geométrico (elev mín)
     L.polygon(visRing(s.lon,MIN_EL),{color:s.color,weight:on?1.6:1,opacity:on?.7:.35,fill:false,dashArray:'2 7'}).addTo(visLayer);
   });
 }
@@ -418,11 +459,11 @@ function render(){
 
   const b=map.getBounds(), diagKm=map.distance(b.getNorthWest(),b.getSouthEast())/1000, len=Math.max(0.6,diagKm*0.20);
 
-  // líneas de satélites no activos (solo si están sobre horizonte y dentro de su haz si lo tienen)
+  // líneas de satélites no activos (sobre horizonte y dentro de cobertura)
   SATS.forEach((s,i)=>{
     if(i===active)return; const a=lookAngles(pt.lat,pt.lng,s.lon); if(a.el<MIN_EL)return;
-    const inB=pointInGeom(pt.lng,pt.lat,s.footprint);
-    if(inB===false)return; // fuera del haz -> no la dibujo
+    const ev=evalCoverage(pt.lng,pt.lat,s.levels);
+    if(ev.state==='out')return; // fuera de cobertura -> no la dibujo
     const end=destPoint(pt.lat,pt.lng,a.az,len);
     L.polyline([[pt.lat,pt.lng],end],{color:s.color,weight:2,opacity:.6,dashArray:'4 6'}).addTo(vectors);
     L.marker(end,{icon:L.divIcon({className:'',html:`<div class="vec-label dim" style="--sat:${s.color}">${s.name.split(' ')[0]} ${a.az.toFixed(0)}°</div>`,iconSize:[0,0]})}).addTo(vectors);
@@ -437,7 +478,7 @@ function render(){
   document.getElementById('gSkS').textContent=skewText(a.skew);
   const cInfo=document.getElementById('cInfo');
 
-  const inBeam=pointInGeom(pt.lng,pt.lat,sObj.footprint); // true/false/null(sin haz)
+  const ev=evalCoverage(pt.lng,pt.lat,sObj.levels);
   const apx=sObj.fpApprox?' <b>(aprox.)</b>':'';
 
   function drawLine(color,solid){
@@ -446,26 +487,33 @@ function render(){
     if(solid)L.polyline([[pt.lat,pt.lng],end],{color:'#fff',weight:1.4,opacity:.5}).addTo(vectors);
     L.marker(end,{icon:L.divIcon({className:'',html:`<div class="vec-label ${solid?'':'out'}">${sObj.name} · AZ ${a.az.toFixed(1)}°</div>`,iconSize:[0,0]})}).addTo(vectors);
   }
+  const pointInfo=`Azimut <b>${fmt(a.az)}°</b> · Elevación <b>${fmt(a.el)}°</b> · Skew LNB <b>${skewText(a.skew)}</b><br>Rango oblicuo ≈ ${fmt(a.range,0)} km`;
 
   if(a.el<=0){
     elG.style.color='var(--bad)'; elS.textContent='bajo horizonte';
     setCov('down','⛔',`<b>Bajo el horizonte</b> · ${sObj.name} no es visible desde este punto (elev. ${fmt(a.el)}°).`);
     cInfo.innerHTML=`El satélite está por debajo del horizonte aquí. No es posible apuntar.`;
-  }else if(inBeam===false){
+  }else if(ev.state==='out'){
     elG.style.color='var(--warn)'; elS.textContent='sobre horizonte';
     drawLine('var(--warn)',false);
     setCov('out','✕',`<b>Fuera de cobertura</b>${apx} · el punto está fuera del haz de ${sObj.name}, no habrá señal aunque la antena vea el satélite.`);
     cInfo.innerHTML=`Geométricamente visible (AZ ${fmt(a.az)}° / EL ${fmt(a.el)}°) pero <b>fuera del footprint</b>. Sin señal útil.`;
-  }else if(inBeam===true){
+  }else if(ev.state==='in'){
     elG.style.color=col; elS.textContent='sobre horizonte';
     drawLine('#ff1f3d',true);
-    setCov('in','✓',`<b>En cobertura</b>${apx} · apunta la antena por la <b>línea roja</b>.`);
-    cInfo.innerHTML=`Azimut <b>${fmt(a.az)}°</b> · Elevación <b>${fmt(a.el)}°</b> · Skew LNB <b>${skewText(a.skew)}</b><br>Rango oblicuo ≈ ${fmt(a.range,0)} km`;
-  }else{ // sin footprint cargado
+    const dbw=ev.best.dbw, ant=antenaFor(dbw);
+    if(dbw!=null){
+      setCov('in','✓',`<b>En cobertura</b>${apx} · EIRP ≈ <b>${dbw} dBW</b> · antena sugerida <b>${ant}</b>`);
+      cInfo.innerHTML=`${pointInfo}<br><span style="color:var(--muted2)">Antena orientativa por EIRP; en zona tropical/borde sube de tamaño por lluvia.</span>`;
+    }else{
+      setCov('in','✓',`<b>En cobertura</b>${apx} · apunta la antena por la <b>línea roja</b>.`);
+      cInfo.innerHTML=pointInfo;
+    }
+  }else{ // sin niveles
     elG.style.color=col; elS.textContent='sobre horizonte';
     drawLine('#ff1f3d',true);
-    setCov('warn','◌',`<b>Sin footprint cargado</b> para ${sObj.name}. Solo se verifica el horizonte — importa o dibuja el haz para confirmar cobertura.`);
-    cInfo.innerHTML=`Azimut <b>${fmt(a.az)}°</b> · Elevación <b>${fmt(a.el)}°</b> · Skew LNB <b>${skewText(a.skew)}</b><br>Rango oblicuo ≈ ${fmt(a.range,0)} km`;
+    setCov('warn','◌',`<b>Sin footprint cargado</b> para ${sObj.name}. Solo se verifica el horizonte — importa o dibuja niveles para confirmar cobertura.`);
+    cInfo.innerHTML=pointInfo;
   }
 }
 
@@ -513,21 +561,20 @@ document.getElementById('grip').onclick=()=>{
 };
 
 /* ===================== Dibujar footprint ===================== */
-let drawMode=false, drawIdx=-1, drawPts=[], drawLine=null, drawMarkers=L.layerGroup();
+let drawMode=false, drawIdx=-1, drawLvl=0, drawPts=[], drawLine=null, drawMarkers=L.layerGroup();
 const drawbar=document.getElementById('drawbar');
-function enterDraw(idx){
-  // conserva ediciones del modal
+function enterDraw(idx,lvl){
   SATS=collectDraft(); saveSats();
-  drawIdx=idx; drawMode=true; drawPts=[]; 
+  drawIdx=idx; drawLvl=lvl; drawMode=true; drawPts=[];
   drawMarkers.addTo(map); drawMarkers.clearLayers();
   if(drawLine){map.removeLayer(drawLine);drawLine=null;}
   closeModal();
-  document.getElementById('drawLbl').textContent=`Traza la cobertura de ${SATS[idx].name}`;
+  const lab=(SATS[idx].levels[lvl]&&SATS[idx].levels[lvl].dbw!=null)?` · ${SATS[idx].levels[lvl].dbw} dBW`:'';
+  document.getElementById('drawLbl').textContent=`Traza ${SATS[idx].name}${lab}`;
   drawbar.classList.add('show');
-  if(SATS[idx].footprint){ // precarga el contorno existente como base editable
-    const g=SATS[idx].footprint; const ring=(g.type==='Polygon'?g.coordinates[0]:g.coordinates[0][0])||[];
-    ring.slice(0,-1).forEach(c=>addDrawPoint(L.latLng(c[1],c[0])));
-  }
+  const cur=SATS[idx].levels[lvl]&&SATS[idx].levels[lvl].geom;
+  if(cur){const g=cur; const ring=(g.type==='Polygon'?g.coordinates[0]:g.coordinates[0][0])||[];
+    ring.slice(0,-1).forEach(c=>addDrawPoint(L.latLng(c[1],c[0])));}
 }
 function addDrawPoint(latlng){
   drawPts.push(latlng);
@@ -546,13 +593,14 @@ document.getElementById('drawUndo').onclick=()=>{drawPts.pop();
 document.getElementById('drawSave').onclick=()=>{
   if(drawPts.length<3){alert('Marca al menos 3 puntos.');return;}
   const ring=drawPts.map(ll=>[ll.lng,ll.lat]); ring.push(ring[0]);
-  SATS[drawIdx].footprint={type:'Polygon',coordinates:[ring]}; SATS[drawIdx].fpApprox=false;
+  if(!SATS[drawIdx].levels[drawLvl])SATS[drawIdx].levels[drawLvl]={dbw:null,geom:null};
+  SATS[drawIdx].levels[drawLvl].geom={type:'Polygon',coordinates:[ring]}; SATS[drawIdx].fpApprox=false;
   saveSats(); exitDraw(); renderFootprints(); render(); openModal();
 };
 document.getElementById('drawCancel').onclick=()=>{exitDraw();openModal();};
 
 /* ===================== Importar footprint ===================== */
-let importIdx=-1;
+let importIdx=-1, importLvl=0;
 const fpFile=document.getElementById('fpFile');
 function geojsonToGeom(obj){const polys=[];
   const add=g=>{if(!g)return;if(g.type==='Polygon')polys.push(g.coordinates);else if(g.type==='MultiPolygon')g.coordinates.forEach(p=>polys.push(p));};
@@ -592,7 +640,8 @@ fpFile.onchange=async()=>{
     const g=await parseFootprintFile(f);
     if(!g||!fpVertices(g))throw new Error('No se encontró un polígono de cobertura en el archivo.');
     draft=collectDraft();
-    draft[importIdx].footprint=g; draft[importIdx].fpApprox=false;
+    if(!draft[importIdx].levels[importLvl])draft[importIdx].levels[importLvl]={dbw:null,geom:null};
+    draft[importIdx].levels[importLvl].geom=g; draft[importIdx].fpApprox=false;
     renderModal();
   }catch(e){alert('Error al importar: '+e.message);}
   fpFile.value='';
@@ -641,9 +690,15 @@ let draft=[];
 function cfgToText(cfg){return Object.entries(cfg||{}).map(([k,v])=>`${k}: ${v}`).join('\n');}
 function textToCfg(t){const o={};(t||'').split('\n').forEach(line=>{const i=line.indexOf(':');
   if(i>0){const k=line.slice(0,i).trim(),v=line.slice(i+1).trim();if(k)o[k]=v;}});return o;}
-function fpStatus(s){if(!s.footprint)return ['none','sin footprint'];
-  return s.fpApprox?['approx',`aprox · ${fpVertices(s.footprint)} vért.`]:['ok',`cargado · ${fpVertices(s.footprint)} vért.`];}
-function satCardHTML(s,idx){const [fc,ft]=fpStatus(s);
+function satCardHTML(s,idx){
+  const levels=s.levels||[];
+  const lvHTML=levels.map((L,li)=>`<div class="lvrow">
+      <input class="lvdbw" data-dbw="${li}" type="number" step="1" placeholder="dBW" value="${L.dbw!=null?L.dbw:''}">
+      <span class="lvinfo ${L.geom?'ok':'none'}">${L.geom?fpVertices(L.geom)+' vért':'sin trazo'}</span>
+      <button data-draw="${idx}:${li}">Dibujar</button>
+      <button data-imp="${idx}:${li}">Importar</button>
+      <button class="clr" data-clr="${idx}:${li}" title="Quitar nivel">×</button>
+    </div>`).join('');
   return `<div class="satcard" data-idx="${idx}">
     <div class="sc-head"><span class="swatch" style="background:${s.color}"></span><strong>Satélite ${idx+1}</strong>
       <button class="del" data-del="${idx}" title="Eliminar">🗑</button></div>
@@ -657,32 +712,38 @@ function satCardHTML(s,idx){const [fc,ft]=fpStatus(s);
       <textarea data-f="cfg">${cfgToText(s.cfg)}</textarea>
       <span class="hintline">Puedes listar varios TP en líneas distintas.</span></div>
     <div class="fpbox">
-      <div class="fphead">Footprint (haz) · <span class="fpstat ${fc}">${ft}</span></div>
-      <div class="fpbtns">
-        <button data-imp="${idx}">Importar KMZ/KML/GeoJSON</button>
-        <button data-draw="${idx}">Dibujar</button>
-        <button class="clr" data-clr="${idx}">Quitar</button>
-      </div></div>
+      <div class="fphead">Niveles de cobertura (EIRP en dBW)${s.fpApprox?' · <span class="fpstat approx">aprox</span>':''}</div>
+      ${lvHTML}
+      <button class="addlv" data-addlv="${idx}">+ Añadir nivel</button>
+      <span class="hintline">Contorno interior = mayor dBW = antena más pequeña. Deja dBW vacío para un contorno único sin nivel.</span>
+    </div>
   </div>`;
 }
 function renderModal(){
   mBody.innerHTML=draft.map(satCardHTML).join('')
     +`<div class="cacheline">Mapa offline: <b id="cacheCount">…</b> teselas<button id="cacheClear">Vaciar</button></div>`;
+  const D2=s=>s.split(':').map(Number);
   mBody.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{draft=collectDraft();draft.splice(+b.dataset.del,1);renderModal();});
-  mBody.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{draft=collectDraft();importIdx=+b.dataset.imp;fpFile.click();});
-  mBody.querySelectorAll('[data-clr]').forEach(b=>b.onclick=()=>{draft=collectDraft();draft[+b.dataset.clr].footprint=null;draft[+b.dataset.clr].fpApprox=false;renderModal();});
-  mBody.querySelectorAll('[data-draw]').forEach(b=>b.onclick=()=>{enterDraw(+b.dataset.draw);});
+  mBody.querySelectorAll('[data-addlv]').forEach(b=>b.onclick=()=>{draft=collectDraft();(draft[+b.dataset.addlv].levels||(draft[+b.dataset.addlv].levels=[])).push({dbw:null,geom:null});renderModal();});
+  mBody.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{draft=collectDraft();[importIdx,importLvl]=D2(b.dataset.imp);fpFile.click();});
+  mBody.querySelectorAll('[data-draw]').forEach(b=>b.onclick=()=>{const[i,l]=D2(b.dataset.draw);enterDraw(i,l);});
+  mBody.querySelectorAll('[data-clr]').forEach(b=>b.onclick=()=>{draft=collectDraft();const[i,l]=D2(b.dataset.clr);draft[i].levels.splice(l,1);renderModal();});
   refreshCacheCount();
   document.getElementById('cacheClear').onclick=async()=>{if(!confirm('¿Borrar el mapa guardado sin conexión?'))return;
     try{await caches.delete('apsat-tiles-v1');}catch(e){}refreshCacheCount();};
 }
 function collectDraft(){
-  return [...mBody.querySelectorAll('.satcard')].map((card,k)=>{
+  return [...mBody.querySelectorAll('.satcard')].map(card=>{
     const g=f=>card.querySelector(`[data-f="${f}"]`).value;
     const prev=draft[+card.dataset.idx]||{};
+    const prevLv=prev.levels||[];
+    const levels=[...card.querySelectorAll('.lvdbw')].map(inp=>{
+      const li=+inp.dataset.dbw, v=inp.value.trim();
+      return {dbw:v===''?null:parseFloat(v), geom:(prevLv[li]&&prevLv[li].geom)||null};
+    });
     return {id:prev.id||'s'+Math.random().toString(36).slice(2,7),name:g('name')||'Satélite',
       lon:parseFloat(g('lon'))||0,color:g('color')||'#ff1f3d',cfg:textToCfg(g('cfg')),
-      footprint:prev.footprint||null,fpApprox:!!prev.fpApprox};
+      levels,fpApprox:!!prev.fpApprox};
   });
 }
 async function refreshCacheCount(){const el=document.getElementById('cacheCount');if(!el)return;
