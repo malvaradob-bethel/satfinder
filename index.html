@@ -175,6 +175,7 @@
   .incperm{text-align:center;padding:24px 8px}
   .incperm p{color:var(--muted);font-size:13px;margin:0 0 14px}
   .inctabs{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+  .incmodetag{text-align:center;font:700 11px/1 system-ui;letter-spacing:2.5px;color:var(--muted);margin-bottom:12px}
   .inctabs button{flex:1;max-width:170px;background:var(--surf);color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font:600 12px/1 system-ui;cursor:pointer}
   .inctabs button.on{background:var(--vector);color:#fff;border-color:var(--vector)}
   .incmode{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:9px auto 4px}
@@ -344,10 +345,7 @@
         <button class="btn primary" id="incEnable">Activar sensores</button>
       </div>
       <div id="incLive">
-        <div class="inctabs" id="incTabs">
-          <button data-t="angle" class="on">Inclinómetro</button>
-          <button data-t="level">Nivel (burbuja)</button>
-        </div>
+        <div class="incmodetag" id="incModeTag">INCLINÓMETRO · canto</div>
         <div id="incAngleView">
         <svg class="incgauge" viewBox="0 0 240 240" aria-label="Inclinómetro">
           <circle cx="120" cy="120" r="116" fill="#0e1420" stroke="#2a3547" stroke-width="3"/>
@@ -358,11 +356,11 @@
           <line id="incTgtNeedle" x1="120" y1="120" x2="214" y2="120" stroke="var(--ok)" stroke-width="3" stroke-dasharray="6 5" style="display:none"/>
           <g id="incNeedle"><line x1="120" y1="120" x2="208" y2="120" stroke="var(--vector)" stroke-width="4"/><circle cx="208" cy="120" r="5" fill="var(--vector)"/></g>
           <circle cx="120" cy="120" r="8" fill="#0e1420" stroke="#3a4554" stroke-width="2"/>
-          <text id="incBig" x="120" y="172" text-anchor="middle" class="gaugenum">0.0°</text>
+          <text id="incBig" x="120" y="136" text-anchor="middle" class="gaugenum">0.0°</text>
         </svg>
         <button class="btn freeze" id="incFreeze">⏸ Congelar lectura</button>
         <div class="incread">
-          <div class="incsub">inclinación del canto · apoya un borde del teléfono sobre el plato</div>
+          <div class="incsub">apoya un borde del teléfono (ancho o estrecho) a lo largo del plato</div>
           <div class="inctgt" id="incTgt">Selecciona un punto para ver la elevación objetivo.</div>
           <div class="incdelta" id="incDelta"></div>
           <div class="tgtbtns">
@@ -402,15 +400,15 @@
           </div>
         </div>
         <div class="incbtns">
-          <button class="btn" id="incCal">Calibrar 0°</button>
+          <button class="btn" id="incCal">0° · poner a cero</button>
           <button class="btn ghost" id="incReset">Quitar calibración</button>
         </div>
-        <p class="note">Apoya el teléfono <b>plano contra el dorso o la cara del plato</b> (como en tu foto) y lee el ángulo: 0° = horizontal, 90° = vertical. Funciona en cualquier orientación y sentido de giro. En platos <b>offset</b>, cuando el plato ya esté bien apuntado (verificado por señal) usa <b>Fijar objetivo = lectura</b> para repetir el mismo ángulo en otras instalaciones idénticas.</p>
+        <p class="note">Apoya un <b>borde del teléfono a lo largo del plato</b> (de canto o plano, da igual) y lee el ángulo: 0° = borde horizontal, 90° = vertical. Mide <b>un solo eje</b> según la orientación, así que el otro eje no lo afecta. Por debajo de 45° pasa solo a modo <b>nivel (burbuja)</b>. Usa <b>0° · poner a cero</b> para tarar con el borde ancho o estrecho. En platos <b>offset</b>, si ya está bien apuntado (señal ok) usa <b>Fijar objetivo = lectura</b> para repetirlo en otras instalaciones.</p>
         </div>
         <div id="incLevelView" style="display:none">
           <div class="inclevel"><div class="lvtarget"></div><div class="lvbub" id="incBub"></div></div>
           <div class="incsub" style="text-align:center;font-size:13px" id="incRollTxt">nivel —</div>
-          <p class="note">Vista de <b>nivel</b>: la burbuja se centra y se pone verde cuando el teléfono está plano y a nivel. Úsala para nivelar la base o el mástil del plato. Es independiente de la medición de ángulo.</p>
+          <p class="note">Modo <b>nivel</b> (aparece solo cuando el teléfono está casi plano, &lt;45°): la burbuja se centra y se pone verde cuando está a nivel. Úsalo para aplomar la base o el mástil. Inclina el teléfono más de 45° para volver al inclinómetro.</p>
         </div>
       </div>
     </div>
@@ -766,7 +764,7 @@ window.addEventListener('online',updNet);window.addEventListener('offline',updNe
 
 /* ===================== Inclinómetro ===================== */
 const incOverlay=document.getElementById('incOverlay');
-let incOn=false, incBeta=0, incGamma=0, incZero=0, incElev=null, incMsg='', incPend=false, incTgtManual=null, incOffset=22.5, incFrozen=false;
+let incOn=false, incBeta=0, incGamma=0, incZero=0, incElev=null, incMsg='', incPend=false, incTgtManual=null, incOffset=22.5, incFrozen=false, incBubbleMode=false;
 function incOrient(e){ if(e.beta==null||incFrozen)return; incBeta=e.beta; incGamma=e.gamma||0;
   if(!incPend){incPend=true;requestAnimationFrame(()=>{incPend=false;drawInc();});} }
 function startIncSensors(){ if(!incOn){window.addEventListener('deviceorientation',incOrient,true);incOn=true;}
@@ -779,40 +777,59 @@ function reqIncPerm(){
   } else if('DeviceOrientationEvent' in window){ startIncSensors(); }
   else { showIncPerm('Este dispositivo no expone sensores de inclinación.'); }
 }
-// Inclinación de un CANTO/eje del teléfono respecto a la horizontal (como el clinómetro real):
-// se toma el eje del teléfono MÁS inclinado, así sirve apoyando cualquier borde y da igual si la
-// pantalla queda de canto o plana. 0° = borde horizontal, 90° = borde vertical. Invariante al giro.
-function edgeIncl(b,g){const D=Math.PI/180;
-  const xi=Math.asin(Math.min(1,Math.abs(Math.sin(g*D))))/D;
-  const yi=Math.asin(Math.min(1,Math.abs(Math.sin(b*D)*Math.cos(g*D))))/D;
-  return Math.max(xi,yi);}
-function rawTilt(){ return edgeIncl(incBeta,incGamma); }
+// ---- Modelo del clinómetro (replica el comportamiento de plaincode) ----
+// Inclinación total de la cara desde la horizontal (0 plano, 90 de canto): decide el MODO.
+function tiltFlat(b,g){const D=Math.PI/180;let c=Math.cos(b*D)*Math.cos(g*D);c=Math.max(-1,Math.min(1,c));return Math.acos(c)/D;}
+// Lectura del clinómetro: UN SOLO eje según la orientación (ignora el eje transversal),
+// por eso NO es sensible al otro eje. 0° = borde horizontal, 90° = teléfono vertical.
+function clinoReading(){
+  if(Math.abs(incGamma)>45){            // apaisado -> usa el giro lateral (gamma)
+    return Math.min(90,Math.abs(incGamma));
+  } else {                               // retrato/vertical -> usa el cabeceo (beta)
+    const bp=Math.abs(incBeta);
+    return 90-Math.abs(90-bp);           // 0 plano, 90 vertical (tolera >90)
+  }
+}
+function rawTilt(){ return clinoReading(); }
 // Objetivo mecánico del plato offset = elevación del haz − offset del plato.
 function mechTarget(){ if(incElev==null)return null; return Math.max(0,Math.min(90, incElev-incOffset)); }
 function effTarget(){ return incTgtManual!=null? incTgtManual : mechTarget(); }
+// Escala tipo transportador: 0° en los lados, 90° arriba/abajo (círculo completo).
 function buildIncTicks(){
   const g=document.getElementById('incTicks'); if(!g||g.childElementCount)return;
   const NS='http://www.w3.org/2000/svg', C=120;
-  for(let v=0;v<=90;v+=5){
-    const maj=(v%15===0), r1=104, r2=maj?87:96, a=v*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
+  for(let s=0;s<360;s+=5){
+    const maj=(s%15===0), r1=104, r2=maj?86:96, a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
     const ln=document.createElementNS(NS,'line');
     ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
     ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
     ln.setAttribute('class',maj?'tickmaj':'tick'); g.appendChild(ln);
-    if(maj){const t=document.createElementNS(NS,'text');
-      t.setAttribute('x',(C+76*cx).toFixed(1)); t.setAttribute('y',(C-76*sy+4).toFixed(1));
-      t.setAttribute('text-anchor','middle'); t.setAttribute('class','tk'); t.textContent=v; g.appendChild(t);}
+    if(maj){const inc=90-Math.abs(90-(s%180)); const t=document.createElementNS(NS,'text');
+      t.setAttribute('x',(C+74*cx).toFixed(1)); t.setAttribute('y',(C-74*sy+4).toFixed(1));
+      t.setAttribute('text-anchor','middle'); t.setAttribute('class','tk'); t.textContent=inc; g.appendChild(t);}
   }
 }
+function setIncMode(){ // histéresis alrededor de 45°
+  const flat=tiltFlat(incBeta,incGamma);
+  if(incBubbleMode && flat>47) incBubbleMode=false;
+  else if(!incBubbleMode && flat<43) incBubbleMode=true;
+}
 function drawInc(){
+  setIncMode();
+  document.getElementById('incAngleView').style.display = incBubbleMode?'none':'';
+  document.getElementById('incLevelView').style.display = incBubbleMode?'':'none';
+  document.getElementById('incModeTag').textContent = incBubbleMode?'NIVEL · burbuja':'INCLINÓMETRO · canto';
+  if(incBubbleMode){
+    const bub=document.getElementById('incBub'), k=3.6;
+    const bx=Math.max(-115,Math.min(115,incGamma*k)), by=Math.max(-115,Math.min(115,incBeta*k));
+    bub.style.transform=`translate(${bx.toFixed(1)}px,${by.toFixed(1)}px)`;
+    const lvl=Math.hypot(incBeta,incGamma)<1.2; bub.style.background=lvl?'var(--ok)':'var(--warn)';
+    document.getElementById('incRollTxt').textContent= lvl?'a nivel ✓':`fuera de nivel ${Math.hypot(incBeta,incGamma).toFixed(1)}°`;
+    return;
+  }
   const ang=Math.max(0,Math.min(95, rawTilt()-incZero));
   document.getElementById('incNeedle').setAttribute('transform',`rotate(${-ang} 120 120)`);
   const big=document.getElementById('incBig'); big.textContent=ang.toFixed(1)+'°';
-  const bub=document.getElementById('incBub'), k=3.6;
-  const bx=Math.max(-115,Math.min(115,incGamma*k)), by=Math.max(-115,Math.min(115,incBeta*k));
-  bub.style.transform=`translate(${bx.toFixed(1)}px,${by.toFixed(1)}px)`;
-  const lvl=Math.hypot(incBeta,incGamma)<1.2; bub.style.background=lvl?'var(--ok)':'var(--warn)';
-  document.getElementById('incRollTxt').textContent= lvl?'a nivel ✓':`fuera de nivel ${Math.hypot(incBeta,incGamma).toFixed(1)}°`;
   const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tn=document.getElementById('incTgtNeedle');
   const T=effTarget();
   if(T!=null){
@@ -828,7 +845,7 @@ function drawInc(){
   }
 }
 function openInc(){
-  incElev=null; incMsg=''; incFrozen=false;
+  incElev=null; incMsg=''; incFrozen=false; incBubbleMode=false;
   const fb=document.getElementById('incFreeze'); fb.classList.remove('on'); fb.textContent='⏸ Congelar lectura';
   buildIncTicks();
   if(pt){const el=lookAngles(pt.lat,pt.lng,SATS[active].lon).el; if(el>0)incElev=el; else incMsg=`${SATS[active].name} está bajo el horizonte en este punto.`;}
@@ -845,12 +862,6 @@ document.getElementById('incFreeze').onclick=()=>{
   incFrozen=!incFrozen; const b=document.getElementById('incFreeze');
   b.classList.toggle('on',incFrozen); b.textContent=incFrozen?'▶ Reanudar':'⏸ Congelar lectura';
 };
-document.getElementById('incTabs').addEventListener('click',e=>{
-  const b=e.target.closest('button[data-t]'); if(!b)return;
-  document.querySelectorAll('#incTabs button').forEach(x=>x.classList.toggle('on',x===b));
-  document.getElementById('incAngleView').style.display = b.dataset.t==='angle'?'':'none';
-  document.getElementById('incLevelView').style.display = b.dataset.t==='level'?'':'none';
-});
 document.getElementById('incSetTgt').onclick=()=>{ incTgtManual=rawTilt()-incZero; drawInc(); };
 document.getElementById('incAutoTgt').onclick=()=>{ incTgtManual=null; drawInc(); };
 // Offset del plato
