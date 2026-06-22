@@ -850,10 +850,10 @@ function drawInc(){
     return;
   }
   const ip=Math.hypot(gAx,gAy);
-  if(ip>=1.2){ incLastRoll=clinoRoll(); incLastAng=clinoReading(); }
+  if(ip>=1.2){ incLastRoll=Math.atan2(gAx,gAy)*180/Math.PI; incLastAng=clinoReading(); }
   const ang=incLastAng, roll=incLastRoll;
-  document.getElementById('incDisc').setAttribute('transform',`rotate(${(-roll).toFixed(1)} 120 120)`);
-  const big=document.getElementById('incBig'); big.textContent=ang.toFixed(1);
+  document.getElementById('incDisc').setAttribute('transform',`rotate(${roll.toFixed(1)} 120 120)`);
+  const big=document.getElementById('incBig'); big.textContent=Math.round(ang);
   const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tm=document.getElementById('incTgtMark');
   const T=effTarget();
   if(T!=null){
