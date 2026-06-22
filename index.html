@@ -13,7 +13,7 @@
   :root{
     --bg:#0c1118; --surf:#141b26; --surf2:#1b2533; --line:#27313f;
     --txt:#e8edf4; --muted:#8a97a8; --muted2:#5e6b7d;
-    --vector:#ff1f3d; --ok:#37c98a; --bad:#ff6b6b; --warn:#f5a31a; --amber:#f5b301;
+    --vector:#ff1f3d; --ok:#37c98a; --bad:#ff6b6b; --warn:#f5a31a; --amber:#f5b301; --sat:#1ec9d4;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
@@ -113,6 +113,27 @@
   .compass-info{font-size:12px;line-height:1.45;color:var(--muted)}
   .compass-info b{color:var(--txt)}
 
+  .diags{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .diag-card{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:9px 13px}
+  .diag{width:92px;height:92px;flex:none}
+  .dval{flex:1;min-width:0}
+  .dval .dk{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+  .dval .dn{font-family:var(--mono);font-size:33px;font-weight:600;line-height:1.04;color:var(--sat)}
+  .dval .ds{font-size:11px;color:var(--muted2);margin-top:2px}
+  .diag .dial{fill:none;stroke:var(--line);stroke-width:2}
+  .diag .ground{stroke:var(--muted2);stroke-width:2}
+  .diag .ref{stroke:var(--muted2);stroke-width:1.5}
+  .diag text{fill:var(--muted)}
+  .diag .card-n{fill:var(--txt);font-weight:700}
+  .diag .azline,.diag .elbore,.diag .polline{stroke:var(--vector);stroke-width:3;stroke-linecap:round}
+  .diag .dish{fill:var(--sat)}
+  .diag .lnb{fill:var(--sat)}
+  .diag .wedge{fill:var(--sat);opacity:.2;stroke:var(--sat);stroke-width:1}
+  .rot{transition:transform .35s ease}
+  .row.key{border-bottom-color:var(--sat)}
+  .row.key .l{color:var(--txt);font-weight:600}
+  .row.key .r{font-size:17px}
+  .row.key .r:not(.h):not(.v){color:var(--sat)}
   .cfg{background:var(--surf);border:1px solid var(--line);border-left:3px solid var(--sat);border-radius:12px;padding:11px 13px;margin-bottom:10px}
   .cfg h3{margin:0 0 9px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
   .cfg .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 14px}
@@ -120,6 +141,11 @@
   .row .l{font-size:11px;color:var(--muted)}
   .row .r{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--txt)}
   .row .r.h{color:var(--amber)} .row .r.v{color:#2f9be0}
+  /* chips de parámetros clave */
+  .cfgkey{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:10px}
+  .kchip{background:color-mix(in srgb,var(--sat) 15%,var(--surf2));border:1px solid color-mix(in srgb,var(--sat) 45%,var(--line));border-radius:11px;padding:8px 6px;text-align:center;min-width:0}
+  .kchip .kk{display:block;font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+  .kchip .kv{display:block;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--sat);margin-top:3px;word-break:break-word}
   .note{font-size:10.5px;color:var(--muted2);line-height:1.5;margin:2px 2px 0}
   .note b{color:var(--muted)}
 
@@ -192,7 +218,7 @@
 <div class="fab-col" id="fabs">
   <div class="fab loc" id="btnLoc" title="Mi ubicación">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
-  <div class="fab fp" id="btnFp" title="Mostrar/ocultar footprints">
+  <div class="fab fp off" id="btnFp" title="Mostrar/ocultar footprints">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="9" ry="5"/><path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5"/></svg></div>
   <div class="fab dl" id="btnDl" title="Descargar zona (offline)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></div>
@@ -207,26 +233,55 @@
     <div class="coord" id="coord"><span class="pin">●</span><span id="coordTxt">Sin punto seleccionado</span>
       <span class="copy" id="copyCoord">copiar</span></div>
     <div class="cov" id="cov"><span class="ic">◎</span><span id="covTxt">Selecciona un punto para evaluar la cobertura.</span></div>
-    <div class="readout">
-      <div class="gauge"><div class="k">Azimut</div><div class="v" id="gAz">––<span class="u">°</span></div><div class="s">verdadero</div></div>
-      <div class="gauge"><div class="k">Elevación</div><div class="v" id="gEl">––<span class="u">°</span></div><div class="s" id="gElS">sobre horizonte</div></div>
-      <div class="gauge"><div class="k">Skew LNB</div><div class="v" id="gSk">––<span class="u">°</span></div><div class="s" id="gSkS">polarización</div></div>
+    <div class="diags">
+      <div class="diag-card">
+        <svg class="diag" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" class="dial"/>
+          <line x1="60" y1="6" x2="60" y2="15" class="ref"/><line x1="114" y1="60" x2="105" y2="60" class="ref"/>
+          <line x1="60" y1="114" x2="60" y2="105" class="ref"/><line x1="6" y1="60" x2="15" y2="60" class="ref"/>
+          <text x="60" y="13" text-anchor="middle" font-size="11" class="card-n">N</text>
+          <text x="112" y="63" text-anchor="middle" font-size="9">E</text>
+          <text x="60" y="119" text-anchor="middle" font-size="9">S</text>
+          <text x="9" y="63" text-anchor="middle" font-size="9">O</text>
+          <g id="azRot" class="rot" style="transform-origin:60px 60px">
+            <line x1="60" y1="58" x2="60" y2="18" class="azline"/>
+            <polygon points="60,12 55,21 65,21" fill="var(--vector)"/>
+            <ellipse cx="60" cy="64" rx="16" ry="6" class="dish"/>
+            <rect x="58" y="63" width="4" height="10" rx="1" class="lnb"/>
+          </g>
+          <circle cx="60" cy="60" r="3" fill="var(--muted)"/>
+        </svg>
+        <div class="dval"><div class="dk">Azimut</div><div class="dn" id="gAz">––°</div><div class="ds">brújula, desde el Norte</div></div>
+      </div>
+      <div class="diag-card">
+        <svg class="diag" viewBox="0 0 120 120">
+          <line x1="8" y1="86" x2="112" y2="86" class="ground"/>
+          <text x="110" y="98" text-anchor="end" font-size="8">horizonte</text>
+          <path id="elWedge" class="wedge"/>
+          <g id="elRot" class="rot" style="transform-origin:32px 86px">
+            <line x1="32" y1="86" x2="100" y2="86" class="elbore"/>
+            <ellipse cx="92" cy="86" rx="5" ry="15" class="dish"/>
+          </g>
+          <circle cx="32" cy="86" r="3" fill="var(--muted)"/>
+        </svg>
+        <div class="dval"><div class="dk">Elevación</div><div class="dn" id="gEl">––°</div><div class="ds" id="gElS">inclinación sobre el horizonte</div></div>
+      </div>
+      <div class="diag-card">
+        <svg class="diag" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" class="dial"/>
+          <line x1="60" y1="8" x2="60" y2="18" class="ref"/><line x1="60" y1="102" x2="60" y2="112" class="ref"/>
+          <g id="polRot" class="rot" style="transform-origin:60px 60px">
+            <line x1="60" y1="20" x2="60" y2="100" class="polline"/>
+            <rect x="52" y="44" width="16" height="32" rx="5" class="lnb"/>
+          </g>
+          <circle cx="60" cy="60" r="3.5" fill="var(--muted)"/>
+        </svg>
+        <div class="dval"><div class="dk">Polarización LNB</div><div class="dn" id="gSk">––°</div><div class="ds" id="gSkS">giro del LNB</div></div>
+      </div>
     </div>
-    <div class="compass-row">
-      <svg class="compass" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="46" fill="none" stroke="#27313f" stroke-width="2"/>
-        <circle cx="50" cy="50" r="2.5" fill="#8a97a8"/>
-        <text x="50" y="14" text-anchor="middle" fill="#8a97a8" font-size="9" font-family="monospace">N</text>
-        <text x="50" y="92" text-anchor="middle" fill="#5e6b7d" font-size="8" font-family="monospace">S</text>
-        <text x="92" y="53" text-anchor="middle" fill="#5e6b7d" font-size="8" font-family="monospace">E</text>
-        <text x="8" y="53" text-anchor="middle" fill="#5e6b7d" font-size="8" font-family="monospace">O</text>
-        <g class="needle" id="needle"><polygon points="50,12 45,52 55,52" fill="#ff1f3d"/><polygon points="50,88 45,52 55,52" fill="#3a4554"/></g>
-      </svg>
-      <div class="compass-info" id="cInfo">Selecciona un punto para calcular la orientación de la antena hacia el satélite.</div>
-    </div>
-    <div class="cfg" id="cfg"><h3 id="cfgTitle">Configuración del decodificador</h3><div class="grid" id="cfgGrid"></div></div>
-    <p class="note"><b>Cobertura (haz)</b> manda sobre la elevación: aunque el satélite esté sobre el horizonte, solo se capta dentro del footprint.
-      <b>Retransmisión</b> = antena del operador; <b>Doméstico DTH</b> ≈ 2/3 (solo bajar señal). El <b>skew</b> se afina por máxima calidad/MER.</p>
+    <div class="compass-info" id="cInfo">Selecciona un punto para calcular la orientación de la antena hacia el satélite.</div>
+    <div class="cfg" id="cfg"><h3 id="cfgTitle">Configuración del decodificador</h3><div class="cfgkey" id="cfgKey"></div><div class="grid" id="cfgGrid"></div></div>
+    <p class="note"><b>Cobertura (haz)</b> manda sobre la elevación: aunque el satélite esté sobre el horizonte, solo se capta dentro del footprint. El <b>skew</b> se afina por máxima calidad/MER.</p>
   </div>
 </div>
 
@@ -291,7 +346,7 @@ const dark=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.p
 const light=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{maxZoom:19,subdomains:'abcd',attribution:'© CARTO © OpenStreetMap'});
 const natgeo=L.tileLayer(ESRI+'NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:16,attribution:'© Esri / National Geographic'});
 const hybrid=L.layerGroup([sat,labels]).addTo(map);
-const footLayer=L.layerGroup().addTo(map);   // haz del operador
+const footLayer=L.layerGroup();   // haz del operador (apagado por defecto)
 const visLayer=L.layerGroup();               // límite geométrico (off por defecto)
 const vectors=L.layerGroup().addTo(map);
 L.control.layers(
@@ -368,21 +423,19 @@ function antenaPair(dbw){ const r=antenaRetx(dbw); if(r==null)return null;
 /* ===================== Render mapa ===================== */
 function renderFootprints(){
   footLayer.clearLayers(); visLayer.clearLayers();
-  SATS.forEach((s,i)=>{
-    const on=i===active;
-    const levels=(s.levels||[]).slice().sort((a,b)=>polyArea(b.geom)-polyArea(a.geom)); // exterior -> interior
-    levels.forEach((lvl,k)=>{
-      const t=levels.length>1?k/(levels.length-1):0; // 0 exterior, 1 interior
-      const fo=(on?0.10:0.05)+t*(on?0.22:0.12);
-      try{L.geoJSON(lvl.geom,{style:{color:s.color,weight:on?(1.4+t):1,opacity:on?.95:.5,
-        fillColor:s.color,fillOpacity:fo,dashArray:s.fpApprox&&k===0?'6 6':null}}).addTo(footLayer);}catch(e){}
-    });
-    if(levels.length){ // etiqueta sobre el contorno exterior
-      try{const c=L.geoJSON(levels[0].geom).getBounds().getCenter();
-        L.marker(c,{interactive:false,icon:L.divIcon({className:'',html:`<div class="fp-tag" style="--sat:${s.color}">${s.name}${s.fpApprox?' (aprox)':''}</div>`,iconSize:[0,0]})}).addTo(footLayer);}catch(e){}
-    }
-    L.polygon(visRing(s.lon,MIN_EL),{color:s.color,weight:on?1.6:1,opacity:on?.7:.35,fill:false,dashArray:'2 7'}).addTo(visLayer);
+  const s=SATS[active]; if(!s)return;
+  const levels=(s.levels||[]).slice().sort((a,b)=>polyArea(b.geom)-polyArea(a.geom)); // exterior -> interior
+  levels.forEach((lvl,k)=>{
+    const t=levels.length>1?k/(levels.length-1):0; // 0 exterior, 1 interior
+    const fo=0.10+t*0.22;
+    try{L.geoJSON(lvl.geom,{style:{color:s.color,weight:1.4+t,opacity:.95,
+      fillColor:s.color,fillOpacity:fo,dashArray:s.fpApprox&&k===0?'6 6':null}}).addTo(footLayer);}catch(e){}
   });
+  if(levels.length){ // etiqueta sobre el contorno exterior
+    try{const c=L.geoJSON(levels[0].geom).getBounds().getCenter();
+      L.marker(c,{interactive:false,icon:L.divIcon({className:'',html:`<div class="fp-tag" style="--sat:${s.color}">${s.name}${s.fpApprox?' (aprox)':''}</div>`,iconSize:[0,0]})}).addTo(footLayer);}catch(e){}
+  }
+  L.polygon(visRing(s.lon,MIN_EL),{color:s.color,weight:1.6,opacity:.7,fill:false,dashArray:'2 7'}).addTo(visLayer);
 }
 
 const tabsEl=document.getElementById('tabs');
@@ -404,15 +457,30 @@ function buildCfg(){
   const s=SATS[active];
   document.getElementById('cfgTitle').textContent=`Decodificador · ${s.name}`;
   document.getElementById('cfg').style.setProperty('--sat',s.color);
+  const entries=Object.entries(s.cfg||{});
+  const isKey=k=>/frec|symbol|polarid/i.test(k);
+  const ord=k=>/frec/i.test(k)?0:/symbol/i.test(k)?1:2;
+  const keys=entries.filter(([k])=>isKey(k)).sort((a,b)=>ord(a[0])-ord(b[0]));
+  const rest=entries.filter(([k])=>!isKey(k));
+  document.getElementById('cfgKey').innerHTML=keys.map(([k,v])=>
+    `<div class="kchip"><span class="kk">${k}</span><span class="kv">${v}</span></div>`).join('');
   const g=document.getElementById('cfgGrid'); g.innerHTML='';
-  Object.entries(s.cfg||{}).forEach(([k,v])=>{
-    const cls=/polarid/i.test(k)?(/^h/i.test(v)?'h':(/^v/i.test(v)?'v':'')):'';
-    g.insertAdjacentHTML('beforeend',`<div class="row"><span class="l">${k}</span><span class="r ${cls}">${v}</span></div>`);
+  rest.forEach(([k,v])=>{
+    g.insertAdjacentHTML('beforeend',`<div class="row"><span class="l">${k}</span><span class="r">${v}</span></div>`);
   });
 }
 function setCov(cls,ic,txt){const el=document.getElementById('cov');
   el.className='cov '+cls; el.querySelector('.ic').textContent=ic; document.getElementById('covTxt').innerHTML=txt;}
 
+function setDiags(az,el,sk){
+  const e=Math.max(0,el);
+  const azR=document.getElementById('azRot'); if(azR)azR.style.transform=`rotate(${az}deg)`;
+  const elR=document.getElementById('elRot'); if(elR)elR.style.transform=`rotate(${-e}deg)`;
+  const w=document.getElementById('elWedge');
+  if(w){const R=44,px=32,py=86,r=e*Math.PI/180,x2=(px+R*Math.cos(r)).toFixed(1),y2=(py-R*Math.sin(r)).toFixed(1);
+    w.setAttribute('d',`M${px},${py} L${px+R},${py} A${R},${R} 0 0 0 ${x2},${y2} Z`);}
+  const pR=document.getElementById('polRot'); if(pR)pR.style.transform=`rotate(${sk}deg)`;
+}
 function render(){
   if(active>=SATS.length)active=0;
   buildCfg();
@@ -420,7 +488,7 @@ function render(){
   document.getElementById('gAz').style.color=col;
   document.getElementById('gEl').style.color=col;
   document.getElementById('gSk').style.color=col;
-  document.getElementById('gEl').style.color=col;
+  const dg=document.querySelector('.diags'); if(dg)dg.style.setProperty('--sat',col);
   vectors.clearLayers();
   if(!pt){setCov('','◎','Selecciona un punto para evaluar la cobertura.');return;}
 
@@ -437,10 +505,10 @@ function render(){
   });
 
   const a=lookAngles(pt.lat,pt.lng,sObj.lon);
-  document.getElementById('gAz').firstChild.textContent=fmt(a.az);
-  document.getElementById('gEl').firstChild.textContent=fmt(a.el);
-  document.getElementById('gSk').firstChild.textContent=fmt(Math.abs(a.skew));
-  document.getElementById('needle').style.transform=`rotate(${a.az}deg)`;
+  document.getElementById('gAz').textContent=fmt(a.az)+'°';
+  document.getElementById('gEl').textContent=fmt(a.el)+'°';
+  document.getElementById('gSk').textContent=fmt(Math.abs(a.skew))+'°';
+  setDiags(a.az,a.el,a.skew);
   const elG=document.getElementById('gEl'),elS=document.getElementById('gElS');
   document.getElementById('gSkS').textContent=skewText(a.skew);
   const cInfo=document.getElementById('cInfo');
@@ -471,7 +539,7 @@ function render(){
     const dbw=ev.best.dbw, ap=antenaPair(dbw);
     if(dbw!=null){
       setCov('in','✓',`<b>En cobertura</b>${apx} · EIRP ≈ <b>${dbw} dBW</b><br>Antena — Doméstico DTH: <b>${ap.dom}</b> · Retransmisión: <b>${ap.retx}</b>`);
-      cInfo.innerHTML=`${pointInfo}<br><span style="color:var(--muted2)">«Retransmisión» = valor del operador; «Doméstico DTH» ≈ 2/3 (solo bajar señal). En borde o zona tropical sube por lluvia.</span>`;
+      cInfo.innerHTML=`${pointInfo}<br><span style="color:var(--muted2)">Sugerencia: en zonas de mayor lluvia, optar por una antena de mayor diámetro.</span>`;
     }else{
       setCov('in','✓',`<b>En cobertura</b>${apx} · apunta la antena por la <b>línea roja</b>.`);
       cInfo.innerHTML=pointInfo;
