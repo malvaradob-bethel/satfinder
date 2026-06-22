@@ -406,10 +406,10 @@ function renderFootprints(){
   SATS.forEach((s,i)=>{
     const on=i===active;
     const levels=(s.levels||[]).slice().sort((a,b)=>polyArea(b.geom)-polyArea(a.geom)); // exterior -> interior
-    levels.forEach((L,k)=>{
+    levels.forEach((lvl,k)=>{
       const t=levels.length>1?k/(levels.length-1):0; // 0 exterior, 1 interior
       const fo=(on?0.10:0.05)+t*(on?0.22:0.12);
-      try{L.geoJSON(L.geom,{style:{color:s.color,weight:on?(1+t):0.8,opacity:on?.85:.4,
+      try{L.geoJSON(lvl.geom,{style:{color:s.color,weight:on?(1.4+t):1,opacity:on?.95:.5,
         fillColor:s.color,fillOpacity:fo,dashArray:s.fpApprox&&k===0?'6 6':null}}).addTo(footLayer);}catch(e){}
     });
     if(levels.length){ // etiqueta sobre el contorno exterior
