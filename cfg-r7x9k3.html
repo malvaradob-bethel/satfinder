@@ -393,12 +393,13 @@ function evalCoverage(lng,lat,levels){
   inside.sort((a,b)=>polyArea(a.geom)-polyArea(b.geom));
   return {state:'in',best:inside[0]};
 }
-// Antena Ku: Retransmisión = valor del operador; Doméstico/RX ≈ x2/3 (experiencia de campo)
+// Antena Ku: Retransmisión = valor del operador; Doméstico DTH ≈ x2/3 (experiencia de campo)
 function antenaRetx(dbw){ if(dbw==null)return null;
   if(dbw>=50)return 0.6; if(dbw>=47)return 0.9; if(dbw>=44)return 1.2; if(dbw>=41)return 1.8; return 2.4; }
 function antMeters(m){ return (Math.round(m*100)/100).toString()+' m'; }
 function antenaPair(dbw){ const r=antenaRetx(dbw); if(r==null)return null;
-  return {retx:antMeters(r), dom:antMeters(Math.round(r*2/3*100)/100)}; }
+  const d=Math.max(0.6, Math.round(r*2/3*100)/100);
+  return {retx:antMeters(r), dom:antMeters(d)}; }
 
 /* ===================== Render mapa ===================== */
 function renderFootprints(){
@@ -505,8 +506,8 @@ function render(){
     drawLine('#ff1f3d',true);
     const dbw=ev.best.dbw, ap=antenaPair(dbw);
     if(dbw!=null){
-      setCov('in','✓',`<b>En cobertura</b>${apx} · EIRP ≈ <b>${dbw} dBW</b><br>Antena — Doméstico/RX: <b>${ap.dom}</b> · Retransmisión: <b>${ap.retx}</b>`);
-      cInfo.innerHTML=`${pointInfo}<br><span style="color:var(--muted2)">«Retransmisión» = valor del operador; «Doméstico/RX» ≈ 2/3 (solo bajar señal). En borde o zona tropical sube por lluvia.</span>`;
+      setCov('in','✓',`<b>En cobertura</b>${apx} · EIRP ≈ <b>${dbw} dBW</b><br>Antena — Doméstico DTH: <b>${ap.dom}</b> · Retransmisión: <b>${ap.retx}</b>`);
+      cInfo.innerHTML=`${pointInfo}<br><span style="color:var(--muted2)">«Retransmisión» = valor del operador; «Doméstico DTH» ≈ 2/3 (solo bajar señal). En borde o zona tropical sube por lluvia.</span>`;
     }else{
       setCov('in','✓',`<b>En cobertura</b>${apx} · apunta la antena por la <b>línea roja</b>.`);
       cInfo.innerHTML=pointInfo;
