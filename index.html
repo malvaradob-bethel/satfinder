@@ -165,10 +165,11 @@
   .inclevel .lvtarget{position:absolute;left:50%;top:50%;width:66px;height:66px;margin:-33px 0 0 -33px;border:1px solid var(--muted2);border-radius:50%}
   .inclevel .lvbub{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px rgba(55,201,138,.55);transition:transform .07s linear,background .2s}
   .incgauge{width:100%;max-width:290px;display:block;margin:0 auto 8px}
-  .incgauge .gaugenum{fill:var(--vector);font:700 42px var(--mono)}
-  .incgauge text.tk{fill:var(--muted2);font:11px var(--mono)}
-  .incgauge line.tick{stroke:var(--muted2);stroke-width:1.5}
-  .incgauge line.tickmaj{stroke:var(--txt);stroke-width:2}
+  .incgauge .gaugenum{fill:#16202e;font:700 32px var(--mono)}
+  .incgauge .gaugedeg{fill:#16202e;font:700 17px var(--mono)}
+  .incgauge text.tk{fill:#aeb9c7;font:700 12px var(--mono)}
+  .incgauge line.tick{stroke:#5d6b7c;stroke-width:1.5}
+  .incgauge line.tickmaj{stroke:#aeb9c7;stroke-width:2.5}
   .btn.freeze{display:block;width:100%;margin:0 0 12px}
   .btn.freeze.on{background:var(--warn);color:#10151f;border-color:var(--warn)}
   .incbtns{display:flex;gap:9px;margin:14px 0 6px}
@@ -358,15 +359,24 @@
         <div class="incmodetag" id="incModeTag">CLINÓMETRO</div>
         <div id="incAngleView">
         <svg class="incgauge" viewBox="0 0 240 240" aria-label="Inclinómetro">
-          <circle cx="120" cy="120" r="116" fill="#0e1420" stroke="#2a3547" stroke-width="3"/>
-          <circle cx="120" cy="120" r="106" fill="none" stroke="#1b2433" stroke-width="1.5"/>
-          <line x1="14" y1="120" x2="226" y2="120" stroke="#1b2433" stroke-width="1"/>
-          <line x1="120" y1="14" x2="120" y2="120" stroke="#1b2433" stroke-width="1" stroke-dasharray="3 5"/>
-          <g id="incTicks"></g>
-          <line id="incTgtNeedle" x1="120" y1="120" x2="214" y2="120" stroke="var(--ok)" stroke-width="3" stroke-dasharray="6 5" style="display:none"/>
-          <g id="incNeedle"><line x1="120" y1="120" x2="208" y2="120" stroke="var(--vector)" stroke-width="4"/><circle cx="208" cy="120" r="5" fill="var(--vector)"/></g>
-          <circle cx="120" cy="120" r="8" fill="#0e1420" stroke="#3a4554" stroke-width="2"/>
-          <text id="incBig" x="120" y="136" text-anchor="middle" class="gaugenum">0.0°</text>
+          <circle cx="120" cy="120" r="118" fill="#0e1420" stroke="#39434f" stroke-width="4"/>
+          <circle cx="120" cy="120" r="112" fill="rgba(17,25,36,.6)" stroke="#222c3a" stroke-width="2"/>
+          <g id="incDisc">
+            <g id="incTicks"></g>
+            <g id="incTgtMark" style="display:none"><polygon points="120,30 113,46 127,46" fill="var(--ok)"/></g>
+            <g id="incCapsuleG">
+              <rect x="40" y="106" width="30" height="28" rx="6" fill="#e9edf2" stroke="#94a0ae" stroke-width="1.2"/>
+              <line x1="45" y1="120" x2="65" y2="120" stroke="#e0353f" stroke-width="1.6"/>
+              <rect x="76" y="99" width="88" height="42" rx="12" fill="#f4f6f9" stroke="#aab4c0" stroke-width="1.5"/>
+              <text id="incBig" x="116" y="131" text-anchor="middle" class="gaugenum">90</text>
+              <text x="154" y="113" class="gaugedeg">°</text>
+              <rect x="170" y="106" width="30" height="28" rx="6" fill="#e9edf2" stroke="#94a0ae" stroke-width="1.2"/>
+              <line x1="175" y1="120" x2="195" y2="120" stroke="#e0353f" stroke-width="1.6"/>
+            </g>
+          </g>
+          <g id="incNeedle"><polygon points="120,28 115,110 125,110" fill="var(--vector)"/></g>
+          <circle cx="120" cy="120" r="7" fill="#11192e" stroke="#5a6675" stroke-width="2"/>
+          <polygon points="120,7 113,20 127,20" fill="#cdd6e2"/>
         </svg>
         <button class="btn freeze" id="incFreeze">⏸ Congelar lectura</button>
         <div class="incread">
@@ -774,12 +784,12 @@ window.addEventListener('online',updNet);window.addEventListener('offline',updNe
 
 /* ===================== Inclinómetro ===================== */
 const incOverlay=document.getElementById('incOverlay');
-let incOn=false, gAx=0, gAy=-9.8, gAz=0, incElev=null, incMsg='', incPend=false, incTgtManual=null, incOffset=22.5, incFrozen=false, incView='clino', incZeroRef='horizontal';
+let incOn=false, gAx=0, gAy=-9.8, gAz=0, incElev=null, incMsg='', incPend=false, incTgtManual=null, incOffset=22.5, incFrozen=false, incView='clino', incZeroRef='horizontal', incLastRoll=0, incLastAng=90;
 function incMotion(e){
   if(incFrozen)return;
   const a=e.accelerationIncludingGravity; if(!a)return;
   const x=a.x, y=a.y, z=a.z; if(x==null&&y==null&&z==null)return;
-  const f=0.18; // paso-bajo
+  const f=0.08; // paso-bajo (más suave = lectura estable)
   gAx+=((x||0)-gAx)*f; gAy+=((y||0)-gAy)*f; gAz+=((z||0)-gAz)*f;
   if(!incPend){incPend=true;requestAnimationFrame(()=>{incPend=false;drawInc();});}
 }
@@ -839,20 +849,22 @@ function drawInc(){
     document.getElementById('incRollTxt').textContent= lvl?'a nivel ✓':'fuera de nivel';
     return;
   }
-  const ang=rawTilt();
-  document.getElementById('incNeedle').setAttribute('transform',`rotate(${-ang} 120 120)`);
-  const big=document.getElementById('incBig'); big.textContent=ang.toFixed(1)+'°';
-  const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tn=document.getElementById('incTgtNeedle');
+  const ip=Math.hypot(gAx,gAy);
+  if(ip>=1.2){ incLastRoll=clinoRoll(); incLastAng=clinoReading(); }
+  const ang=incLastAng, roll=incLastRoll;
+  document.getElementById('incDisc').setAttribute('transform',`rotate(${(-roll).toFixed(1)} 120 120)`);
+  const big=document.getElementById('incBig'); big.textContent=ang.toFixed(1);
+  const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tm=document.getElementById('incTgtMark');
   const T=effTarget();
   if(T!=null){
-    tn.style.display=''; tn.setAttribute('transform',`rotate(${-T} 120 120)`);
+    tm.style.display=''; tm.setAttribute('transform',`rotate(${(90-T).toFixed(1)} 120 120)`);
     const src= incTgtManual!=null? 'fijado manual' : `${SATS[active].name}: elev ${incElev.toFixed(0)}° − offset ${incOffset.toFixed(1)}°`;
     tgt.innerHTML=`Objetivo: <b>${T.toFixed(1)}°</b><br><span style="font-size:11px;color:var(--muted2)">${src}</span>`;
     const d=ang-T;
-    if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';big.style.fill='var(--ok)';}
-    else{del.textContent=`gira ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';big.style.fill='var(--vector)';}
+    if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';big.style.fill='#1aa84f';}
+    else{del.textContent=`gira ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';big.style.fill='#16202e';}
   }else{
-    tn.style.display='none'; del.textContent=''; big.style.fill='var(--vector)';
+    tm.style.display='none'; del.textContent=''; big.style.fill='#16202e';
     tgt.textContent= incMsg||'Selecciona un punto para ver la elevación objetivo.';
   }
 }
