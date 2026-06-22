@@ -780,15 +780,18 @@ function reqIncPerm(){
 // ---- Modelo del clinómetro (replica el comportamiento de plaincode) ----
 // Inclinación total de la cara desde la horizontal (0 plano, 90 de canto): decide el MODO.
 function tiltFlat(b,g){const D=Math.PI/180;let c=Math.cos(b*D)*Math.cos(g*D);c=Math.max(-1,Math.min(1,c));return Math.acos(c)/D;}
-// Lectura del clinómetro: UN SOLO eje según la orientación (ignora el eje transversal),
-// por eso NO es sensible al otro eje. 0° = borde horizontal, 90° = teléfono vertical.
+// ¿El teléfono está apaisado? (según la orientación de pantalla)
+function incLandscape(){
+  let a = (window.screen && screen.orientation && typeof screen.orientation.angle==='number')
+            ? screen.orientation.angle
+            : (typeof window.orientation==='number'? window.orientation : 0);
+  return Math.abs(a)===90;
+}
+// Lectura del clinómetro: SOLO el balanceo sobre el eje del BORDE (ignora el cabeceo de la cara).
+// retrato -> gamma (balanceo lateral) ; apaisado -> beta. 90° = teléfono vertical, 0° = borde horizontal.
 function clinoReading(){
-  if(Math.abs(incGamma)>45){            // apaisado -> usa el giro lateral (gamma)
-    return Math.min(90,Math.abs(incGamma));
-  } else {                               // retrato/vertical -> usa el cabeceo (beta)
-    const bp=Math.abs(incBeta);
-    return 90-Math.abs(90-bp);           // 0 plano, 90 vertical (tolera >90)
-  }
+  const v = incLandscape()? Math.abs(incBeta) : Math.abs(incGamma);
+  return 90 - Math.min(90, v);
 }
 function rawTilt(){ return clinoReading(); }
 // Objetivo mecánico del plato offset = elevación del haz − offset del plato.
