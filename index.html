@@ -167,6 +167,9 @@
   .incbtns{display:flex;gap:9px;margin:14px 0 6px}
   .incperm{text-align:center;padding:24px 8px}
   .incperm p{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .inctabs{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+  .inctabs button{flex:1;max-width:170px;background:var(--surf);color:var(--muted);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font:600 12px/1 system-ui;cursor:pointer}
+  .inctabs button.on{background:var(--vector);color:#fff;border-color:var(--vector)}
   .incmode{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:9px auto 4px}
   .incmode button{background:var(--surf);color:var(--muted);border:0;padding:6px 16px;font:600 12px/1 system-ui;cursor:pointer}
   .incmode button.on{background:var(--vector);color:#fff}
@@ -334,6 +337,11 @@
         <button class="btn primary" id="incEnable">Activar sensores</button>
       </div>
       <div id="incLive">
+        <div class="inctabs" id="incTabs">
+          <button data-t="angle" class="on">Inclinómetro</button>
+          <button data-t="level">Nivel (burbuja)</button>
+        </div>
+        <div id="incAngleView">
         <svg class="incdial" viewBox="0 0 240 168" aria-label="Inclinómetro">
           <line x1="20" y1="130" x2="222" y2="130" stroke="var(--muted2)" stroke-width="2"/>
           <text x="214" y="146" text-anchor="end" class="dc">horizonte</text>
@@ -350,8 +358,7 @@
         </svg>
         <div class="incread">
           <div class="incnow" id="incNow"><span id="incAng">––</span><span class="u">°</span></div>
-          <div class="incsub" id="incModeSub">ángulo del canto · respecto a la vertical</div>
-          <div class="incmode" id="incMode"><button data-m="canto" class="on">Canto</button><button data-m="cara">Cara</button></div>
+          <div class="incsub">ángulo respecto a la horizontal · 0° plano, 90° vertical</div>
           <div class="inctgt" id="incTgt">Selecciona un punto para ver la elevación objetivo.</div>
           <div class="incdelta" id="incDelta"></div>
           <div class="tgtbtns">
@@ -390,13 +397,17 @@
             <p class="note">El plato offset es más <b>alto que ancho</b>; esa relación define el offset: <b>arccos(ancho ÷ alto)</b>. Mide el contorno metálico (no el aro). Verificado con tus platos: 120×130 cm → 22.6°, 60×66 cm → 24.5°.</p>
           </div>
         </div>
-        <div class="inclevel"><div class="lvtarget"></div><div class="lvbub" id="incBub"></div></div>
-        <div class="incsub" style="text-align:center" id="incRollTxt">nivel —</div>
         <div class="incbtns">
           <button class="btn" id="incCal">Calibrar 0°</button>
           <button class="btn ghost" id="incReset">Quitar calibración</button>
         </div>
-        <p class="note"><b>Canto:</b> apoya el borde del teléfono contra el dorso del plato o el brazo (como tu clinómetro) y lee el ángulo respecto a la vertical. <b>Cara:</b> apoya el teléfono plano sobre la superficie. Funciona en cualquier orientación y sentido de giro. En platos <b>offset</b> usa <b>Fijar objetivo = lectura</b> cuando el plato ya esté bien apuntado (verificado por señal) para repetir el mismo ángulo en otras instalaciones. La burbuja central indica el nivel/plomo.</p>
+        <p class="note">Apoya el teléfono <b>plano contra el dorso o la cara del plato</b> (como en tu foto) y lee el ángulo: 0° = horizontal, 90° = vertical. Funciona en cualquier orientación y sentido de giro. En platos <b>offset</b>, cuando el plato ya esté bien apuntado (verificado por señal) usa <b>Fijar objetivo = lectura</b> para repetir el mismo ángulo en otras instalaciones idénticas.</p>
+        </div>
+        <div id="incLevelView" style="display:none">
+          <div class="inclevel"><div class="lvtarget"></div><div class="lvbub" id="incBub"></div></div>
+          <div class="incsub" style="text-align:center" id="incRollTxt">nivel —</div>
+          <p class="note">Vista de <b>nivel</b>: la burbuja se centra y se pone verde cuando el teléfono está plano y a nivel. Úsala para nivelar la base o el mástil del plato. Es independiente de la medición de ángulo.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -751,7 +762,7 @@ window.addEventListener('online',updNet);window.addEventListener('offline',updNe
 
 /* ===================== Inclinómetro ===================== */
 const incOverlay=document.getElementById('incOverlay');
-let incOn=false, incBeta=0, incGamma=0, incZero=0, incElev=null, incMsg='', incPend=false, incMode='canto', incTgtManual=null, incOffset=22.5;
+let incOn=false, incBeta=0, incGamma=0, incZero=0, incElev=null, incMsg='', incPend=false, incTgtManual=null, incOffset=22.5;
 function incOrient(e){ if(e.beta==null)return; incBeta=e.beta; incGamma=e.gamma||0;
   if(!incPend){incPend=true;requestAnimationFrame(()=>{incPend=false;drawInc();});} }
 function startIncSensors(){ if(!incOn){window.addEventListener('deviceorientation',incOrient,true);incOn=true;}
@@ -768,13 +779,12 @@ function clampBeam(a){return Math.max(-12,Math.min(102,a));}
 // Inclinación de la cara del teléfono respecto a la horizontal (combina ambos ejes ->
 // sirve apoyando cualquier lado y girando horario/antihorario):
 function tiltFlat(b,g){const D=Math.PI/180;let c=Math.cos(b*D)*Math.cos(g*D);c=Math.max(-1,Math.min(1,c));return Math.acos(c)/D;}
-// Lectura por modo: 'canto' = ángulo del borde respecto a la vertical (90 - cara);
-// 'cara' = inclinación de la cara plana respecto a la horizontal.
-function rawTilt(){const tf=tiltFlat(incBeta,incGamma); return incMode==='canto'? 90-tf : tf;}
-// Objetivo mecánico = elevación del haz corregida por el offset del plato.
-// canto (dorso respecto a la vertical) = E - offset ; cara (respecto a la horizontal) = 90 - (E - offset).
-function mechTarget(){ if(incElev==null)return null; const m=incElev-incOffset;
-  return incMode==='canto'? Math.max(0,Math.min(90,m)) : Math.max(0,Math.min(90,90-m)); }
+// Lectura única (como el clinómetro real): inclinación de la cara respecto a la horizontal.
+// 0° = teléfono plano, 90° = teléfono vertical. Monótona e invariante a la orientación.
+function rawTilt(){ return tiltFlat(incBeta,incGamma); }
+// Objetivo mecánico (teléfono plano contra el dorso/cara del plato, respecto a la horizontal):
+// = 90° - elevación del haz + offset del plato.
+function mechTarget(){ if(incElev==null)return null; return Math.max(0,Math.min(90, 90-incElev+incOffset)); }
 function effTarget(){ return incTgtManual!=null? incTgtManual : mechTarget(); }
 function drawInc(){
   const ang=rawTilt()-incZero;
@@ -791,7 +801,7 @@ function drawInc(){
     tb.style.display=''; tb.setAttribute('transform',`rotate(${-clampBeam(T)} 50 130)`);
     document.getElementById('incTgtLbl').textContent=T.toFixed(0)+'°';
     const src= incTgtManual!=null? 'fijado manual' : `${SATS[active].name}: elev ${incElev.toFixed(0)}° − offset ${incOffset.toFixed(1)}°`;
-    tgt.innerHTML=`Objetivo (${incMode}): <b>${T.toFixed(1)}°</b><br><span style="font-size:11px;color:var(--muted2)">${src}</span>`;
+    tgt.innerHTML=`Objetivo: <b>${T.toFixed(1)}°</b><br><span style="font-size:11px;color:var(--muted2)">${src}</span>`;
     const d=ang-T;
     if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';now.classList.add('match');}
     else{del.textContent=`${d>0?'baja':'sube'} ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';now.classList.remove('match');}
@@ -812,12 +822,11 @@ incOverlay.addEventListener('click',e=>{if(e.target===incOverlay)closeInc();});
 document.getElementById('incEnable').onclick=reqIncPerm;
 document.getElementById('incCal').onclick=()=>{incZero=rawTilt();drawInc();};
 document.getElementById('incReset').onclick=()=>{incZero=0;drawInc();};
-document.getElementById('incMode').addEventListener('click',e=>{
-  const b=e.target.closest('button[data-m]'); if(!b)return;
-  incMode=b.dataset.m; incZero=0;
-  document.querySelectorAll('#incMode button').forEach(x=>x.classList.toggle('on',x===b));
-  document.getElementById('incModeSub').textContent= incMode==='canto'?'ángulo del canto · respecto a la vertical':'inclinación de la cara · respecto a la horizontal';
-  drawInc();
+document.getElementById('incTabs').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-t]'); if(!b)return;
+  document.querySelectorAll('#incTabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.getElementById('incAngleView').style.display = b.dataset.t==='angle'?'':'none';
+  document.getElementById('incLevelView').style.display = b.dataset.t==='level'?'':'none';
 });
 document.getElementById('incSetTgt').onclick=()=>{ incTgtManual=rawTilt()-incZero; drawInc(); };
 document.getElementById('incAutoTgt').onclick=()=>{ incTgtManual=null; drawInc(); };
