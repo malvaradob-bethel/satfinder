@@ -158,9 +158,12 @@
   .inctgt{font-size:13px;color:var(--muted);margin-top:8px}
   .inctgt b{color:var(--txt)}
   .incdelta{font-size:15px;font-weight:700;margin-top:4px;min-height:19px}
-  .incbubble{width:150px;height:34px;border:1px solid var(--line);border-radius:99px;margin:14px auto 4px;position:relative;background:var(--bg)}
-  .incbubble .ctr{position:absolute;left:50%;top:4px;bottom:4px;width:30px;transform:translateX(-50%);border:1px solid var(--line);border-radius:99px}
-  .incbubble .bub{position:absolute;top:5px;width:24px;height:24px;border-radius:50%;background:var(--ok);left:calc(50% - 12px);transition:left .07s linear,background .2s}
+  .inclevel{width:104px;height:104px;border-radius:50%;border:1px solid var(--line);background:var(--bg);position:relative;margin:14px auto 4px;overflow:hidden}
+  .inclevel::before,.inclevel::after{content:'';position:absolute;background:var(--line);opacity:.55}
+  .inclevel::before{left:0;right:0;top:50%;height:1px}
+  .inclevel::after{top:0;bottom:0;left:50%;width:1px}
+  .inclevel .lvtarget{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border:1px solid var(--muted2);border-radius:50%}
+  .inclevel .lvbub{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(55,201,138,.55);transition:transform .07s linear,background .2s,box-shadow .2s}
   .incbtns{display:flex;gap:9px;margin:14px 0 6px}
   .incperm{text-align:center;padding:24px 8px}
   .incperm p{color:var(--muted);font-size:13px;margin:0 0 14px}
@@ -334,13 +337,13 @@
           <div class="inctgt" id="incTgt">Selecciona un punto para ver la elevación objetivo.</div>
           <div class="incdelta" id="incDelta"></div>
         </div>
-        <div class="incbubble"><div class="ctr"></div><div class="bub" id="incBub"></div></div>
-        <div class="incsub" style="text-align:center" id="incRollTxt">nivel lateral —</div>
+        <div class="inclevel"><div class="lvtarget"></div><div class="lvbub" id="incBub"></div></div>
+        <div class="incsub" style="text-align:center" id="incRollTxt">nivel —</div>
         <div class="incbtns">
           <button class="btn" id="incCal">Calibrar 0°</button>
           <button class="btn ghost" id="incReset">Quitar calibración</button>
         </div>
-        <p class="note">Apoya el borde largo del teléfono en el <b>brazo del LNB</b> o en el dorso del plato y lee la inclinación; o apunta el teléfono en vertical hacia el satélite. En platos <b>offset</b> el ángulo mecánico no es igual a la elevación: usa la escala del plato o suma el ángulo de offset del fabricante. Verifica el mástil a plomo con la burbuja.</p>
+        <p class="note">Apoya <b>cualquier lado o cara</b> del teléfono contra el brazo del LNB o el dorso del plato (da igual la orientación y el sentido de giro) y lee la inclinación. En platos <b>offset</b> el ángulo mecánico no es igual a la elevación: usa la escala del plato o suma el ángulo de offset del fabricante. La burbuja central indica cuándo el teléfono está a nivel/plomo.</p>
       </div>
     </div>
   </div>
@@ -709,14 +712,18 @@ function reqIncPerm(){
   else { showIncPerm('Este dispositivo no expone sensores de inclinación.'); }
 }
 function clampBeam(a){return Math.max(-12,Math.min(102,a));}
+// Inclinación de la cara del teléfono respecto a la horizontal:
+// combina ambos ejes -> sirve apoyando cualquier lado y girando horario/antihorario.
+function tiltFlat(b,g){const D=Math.PI/180;let c=Math.cos(b*D)*Math.cos(g*D);c=Math.max(-1,Math.min(1,c));return Math.acos(c)/D;}
 function drawInc(){
-  const ang=incBeta-incZero;
+  const raw=tiltFlat(incBeta,incGamma), ang=raw-incZero;
   document.getElementById('incAng').textContent=ang.toFixed(1);
   document.getElementById('incBeam').setAttribute('transform',`rotate(${-clampBeam(ang)} 50 130)`);
-  const bub=document.getElementById('incBub'), off=Math.max(-1,Math.min(1,incGamma/30));
-  bub.style.left=`calc(50% - 12px + ${(off*54).toFixed(1)}px)`;
-  const lvl=Math.abs(incGamma)<1.2; bub.style.background=lvl?'var(--ok)':'var(--warn)';
-  document.getElementById('incRollTxt').textContent= lvl?'nivel lateral ✓ a plomo':`inclinado ${incGamma>0?'→':'←'} ${Math.abs(incGamma).toFixed(1)}°`;
+  const bub=document.getElementById('incBub'), k=34/30;
+  const bx=Math.max(-37,Math.min(37,incGamma*k)), by=Math.max(-37,Math.min(37,incBeta*k));
+  bub.style.transform=`translate(${bx.toFixed(1)}px,${by.toFixed(1)}px)`;
+  const lvl=Math.hypot(incBeta,incGamma)<1.5; bub.style.background=lvl?'var(--ok)':'var(--warn)';
+  document.getElementById('incRollTxt').textContent= lvl?'a nivel ✓':`fuera de nivel ${Math.hypot(incBeta,incGamma).toFixed(1)}°`;
   const now=document.getElementById('incNow'),tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tb=document.getElementById('incTgtBeam');
   if(incTarget!=null){
     tb.style.display=''; tb.setAttribute('transform',`rotate(${-clampBeam(incTarget)} 50 130)`);
@@ -740,7 +747,7 @@ document.getElementById('btnInc').onclick=openInc;
 document.getElementById('incClose').onclick=closeInc;
 incOverlay.addEventListener('click',e=>{if(e.target===incOverlay)closeInc();});
 document.getElementById('incEnable').onclick=reqIncPerm;
-document.getElementById('incCal').onclick=()=>{incZero=incBeta;drawInc();};
+document.getElementById('incCal').onclick=()=>{incZero=tiltFlat(incBeta,incGamma);drawInc();};
 document.getElementById('incReset').onclick=()=>{incZero=0;drawInc();};
 
 /* ===================== PWA + SW ===================== */
