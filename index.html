@@ -146,6 +146,24 @@
   .kchip{background:color-mix(in srgb,var(--sat) 15%,var(--surf2));border:1px solid color-mix(in srgb,var(--sat) 45%,var(--line));border-radius:11px;padding:8px 6px;text-align:center;min-width:0}
   .kchip .kk{display:block;font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
   .kchip .kv{display:block;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--sat);margin-top:3px;word-break:break-word}
+  /* inclinómetro */
+  .incmodal .incbody{padding:14px 16px 18px;overflow-y:auto}
+  .incdial{width:100%;max-width:300px;display:block;margin:0 auto 6px}
+  .incdial text.dc{fill:var(--muted2);font:10px var(--mono)}
+  .incread{text-align:center}
+  .incnow{font-family:var(--mono);font-size:52px;font-weight:700;line-height:1;color:var(--vector)}
+  .incnow.match{color:var(--ok)}
+  .incnow .u{font-size:.45em;color:var(--muted);margin-left:2px}
+  .incsub{font-size:11px;color:var(--muted2)}
+  .inctgt{font-size:13px;color:var(--muted);margin-top:8px}
+  .inctgt b{color:var(--txt)}
+  .incdelta{font-size:15px;font-weight:700;margin-top:4px;min-height:19px}
+  .incbubble{width:150px;height:34px;border:1px solid var(--line);border-radius:99px;margin:14px auto 4px;position:relative;background:var(--bg)}
+  .incbubble .ctr{position:absolute;left:50%;top:4px;bottom:4px;width:30px;transform:translateX(-50%);border:1px solid var(--line);border-radius:99px}
+  .incbubble .bub{position:absolute;top:5px;width:24px;height:24px;border-radius:50%;background:var(--ok);left:calc(50% - 12px);transition:left .07s linear,background .2s}
+  .incbtns{display:flex;gap:9px;margin:14px 0 6px}
+  .incperm{text-align:center;padding:24px 8px}
+  .incperm p{color:var(--muted);font-size:13px;margin:0 0 14px}
   .note{font-size:10.5px;color:var(--muted2);line-height:1.5;margin:2px 2px 0}
   .note b{color:var(--muted)}
 
@@ -218,6 +236,8 @@
 <div class="fab-col" id="fabs">
   <div class="fab loc" id="btnLoc" title="Mi ubicación">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+  <div class="fab" id="btnInc" title="Inclinómetro">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16L4 8z"/><circle cx="9" cy="16.5" r="1.2" fill="currentColor" stroke="none"/></svg></div>
   <div class="fab fp off" id="btnFp" title="Mostrar/ocultar footprints">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="9" ry="5"/><path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5"/></svg></div>
   <div class="fab dl" id="btnDl" title="Descargar zona (offline)">
@@ -282,6 +302,47 @@
     <div class="compass-info" id="cInfo">Selecciona un punto para calcular la orientación de la antena hacia el satélite.</div>
     <div class="cfg" id="cfg"><h3 id="cfgTitle">Configuración del decodificador</h3><div class="cfgkey" id="cfgKey"></div><div class="grid" id="cfgGrid"></div></div>
     <p class="note"><b>Cobertura (haz)</b> manda sobre la elevación: aunque el satélite esté sobre el horizonte, solo se capta dentro del footprint. El <b>skew</b> se afina por máxima calidad/MER.</p>
+  </div>
+</div>
+
+<div class="overlay" id="incOverlay">
+  <div class="modal incmodal">
+    <div class="mhead"><h2>Inclinómetro</h2><button class="x" id="incClose">×</button></div>
+    <div class="incbody">
+      <div class="incperm" id="incPerm" style="display:none">
+        <p id="incPermMsg">Necesito permiso para usar los sensores de inclinación del teléfono.</p>
+        <button class="btn primary" id="incEnable">Activar sensores</button>
+      </div>
+      <div id="incLive">
+        <svg class="incdial" viewBox="0 0 240 168" aria-label="Inclinómetro">
+          <line x1="20" y1="130" x2="222" y2="130" stroke="var(--muted2)" stroke-width="2"/>
+          <text x="214" y="146" text-anchor="end" class="dc">horizonte</text>
+          <path d="M 130 130 A 80 80 0 0 0 50 50" fill="none" stroke="var(--line)" stroke-width="1.4" stroke-dasharray="3 5"/>
+          <g id="incTgtBeam" transform="rotate(0 50 130)" style="display:none">
+            <line x1="50" y1="130" x2="206" y2="130" stroke="var(--ok)" stroke-width="3" stroke-dasharray="7 5" opacity="0.75"/>
+            <text x="212" y="133" class="dc" id="incTgtLbl" fill="var(--ok)">obj</text>
+          </g>
+          <g id="incBeam" transform="rotate(0 50 130)">
+            <line x1="50" y1="130" x2="192" y2="130" stroke="var(--vector)" stroke-width="4"/>
+            <ellipse cx="188" cy="130" rx="7" ry="18" fill="#9fd8ff" stroke="#3a4554" stroke-width="1.2"/>
+          </g>
+          <circle cx="50" cy="130" r="4" fill="var(--muted)"/>
+        </svg>
+        <div class="incread">
+          <div class="incnow" id="incNow"><span id="incAng">––</span><span class="u">°</span></div>
+          <div class="incsub">inclinación actual</div>
+          <div class="inctgt" id="incTgt">Selecciona un punto para ver la elevación objetivo.</div>
+          <div class="incdelta" id="incDelta"></div>
+        </div>
+        <div class="incbubble"><div class="ctr"></div><div class="bub" id="incBub"></div></div>
+        <div class="incsub" style="text-align:center" id="incRollTxt">nivel lateral —</div>
+        <div class="incbtns">
+          <button class="btn" id="incCal">Calibrar 0°</button>
+          <button class="btn ghost" id="incReset">Quitar calibración</button>
+        </div>
+        <p class="note">Apoya el borde largo del teléfono en el <b>brazo del LNB</b> o en el dorso del plato y lee la inclinación; o apunta el teléfono en vertical hacia el satélite. En platos <b>offset</b> el ángulo mecánico no es igual a la elevación: usa la escala del plato o suma el ángulo de offset del fabricante. Verifica el mástil a plomo con la burbuja.</p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -631,6 +692,56 @@ btnDl.onclick=async()=>{
 const offbadge=document.getElementById('offbadge');
 function updNet(){offbadge.classList.toggle('show',!navigator.onLine);}
 window.addEventListener('online',updNet);window.addEventListener('offline',updNet);updNet();
+
+/* ===================== Inclinómetro ===================== */
+const incOverlay=document.getElementById('incOverlay');
+let incOn=false, incBeta=0, incGamma=0, incZero=0, incTarget=null, incMsg='', incPend=false;
+function incOrient(e){ if(e.beta==null)return; incBeta=e.beta; incGamma=e.gamma||0;
+  if(!incPend){incPend=true;requestAnimationFrame(()=>{incPend=false;drawInc();});} }
+function startIncSensors(){ if(!incOn){window.addEventListener('deviceorientation',incOrient,true);incOn=true;}
+  document.getElementById('incPerm').style.display='none'; document.getElementById('incLive').style.display=''; }
+function showIncPerm(msg){ document.getElementById('incLive').style.display='none';
+  const p=document.getElementById('incPerm'); p.style.display=''; if(msg)document.getElementById('incPermMsg').textContent=msg; }
+function reqIncPerm(){
+  if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+    DeviceOrientationEvent.requestPermission().then(s=>{s==='granted'?startIncSensors():showIncPerm('Permiso denegado. Actívalo para usar el inclinómetro.');}).catch(()=>showIncPerm('No se pudo solicitar permiso de sensores.'));
+  } else if('DeviceOrientationEvent' in window){ startIncSensors(); }
+  else { showIncPerm('Este dispositivo no expone sensores de inclinación.'); }
+}
+function clampBeam(a){return Math.max(-12,Math.min(102,a));}
+function drawInc(){
+  const ang=incBeta-incZero;
+  document.getElementById('incAng').textContent=ang.toFixed(1);
+  document.getElementById('incBeam').setAttribute('transform',`rotate(${-clampBeam(ang)} 50 130)`);
+  const bub=document.getElementById('incBub'), off=Math.max(-1,Math.min(1,incGamma/30));
+  bub.style.left=`calc(50% - 12px + ${(off*54).toFixed(1)}px)`;
+  const lvl=Math.abs(incGamma)<1.2; bub.style.background=lvl?'var(--ok)':'var(--warn)';
+  document.getElementById('incRollTxt').textContent= lvl?'nivel lateral ✓ a plomo':`inclinado ${incGamma>0?'→':'←'} ${Math.abs(incGamma).toFixed(1)}°`;
+  const now=document.getElementById('incNow'),tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tb=document.getElementById('incTgtBeam');
+  if(incTarget!=null){
+    tb.style.display=''; tb.setAttribute('transform',`rotate(${-clampBeam(incTarget)} 50 130)`);
+    document.getElementById('incTgtLbl').textContent=incTarget.toFixed(0)+'°';
+    tgt.innerHTML=`Objetivo: <b>${incTarget.toFixed(1)}°</b> · ${SATS[active].name}`;
+    const d=ang-incTarget;
+    if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';now.classList.add('match');}
+    else{del.textContent=`${d>0?'baja':'sube'} ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';now.classList.remove('match');}
+  }else{
+    tb.style.display='none'; del.textContent=''; now.classList.remove('match');
+    tgt.textContent= incMsg||'Selecciona un punto para ver la elevación objetivo.';
+  }
+}
+function openInc(){
+  incTarget=null; incMsg='';
+  if(pt){const el=lookAngles(pt.lat,pt.lng,SATS[active].lon).el; if(el>0)incTarget=el; else incMsg=`${SATS[active].name} está bajo el horizonte en este punto.`;}
+  incOverlay.classList.add('show'); drawInc(); reqIncPerm();
+}
+function closeInc(){ incOverlay.classList.remove('show'); if(incOn){window.removeEventListener('deviceorientation',incOrient,true);incOn=false;} }
+document.getElementById('btnInc').onclick=openInc;
+document.getElementById('incClose').onclick=closeInc;
+incOverlay.addEventListener('click',e=>{if(e.target===incOverlay)closeInc();});
+document.getElementById('incEnable').onclick=reqIncPerm;
+document.getElementById('incCal').onclick=()=>{incZero=incBeta;drawInc();};
+document.getElementById('incReset').onclick=()=>{incZero=0;drawInc();};
 
 /* ===================== PWA + SW ===================== */
 (function(){try{
