@@ -167,6 +167,11 @@
   .incbtns{display:flex;gap:9px;margin:14px 0 6px}
   .incperm{text-align:center;padding:24px 8px}
   .incperm p{color:var(--muted);font-size:13px;margin:0 0 14px}
+  .incmode{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:9px auto 4px}
+  .incmode button{background:var(--surf);color:var(--muted);border:0;padding:6px 16px;font:600 12px/1 system-ui;cursor:pointer}
+  .incmode button.on{background:var(--vector);color:#fff}
+  .tgtbtns{display:flex;gap:8px;justify-content:center;margin-top:8px}
+  .tgtbtns .btn{padding:5px 11px;font-size:11px}
   .note{font-size:10.5px;color:var(--muted2);line-height:1.5;margin:2px 2px 0}
   .note b{color:var(--muted)}
 
@@ -333,9 +338,14 @@
         </svg>
         <div class="incread">
           <div class="incnow" id="incNow"><span id="incAng">––</span><span class="u">°</span></div>
-          <div class="incsub">inclinación actual</div>
+          <div class="incsub" id="incModeSub">ángulo del canto · respecto a la vertical</div>
+          <div class="incmode" id="incMode"><button data-m="canto" class="on">Canto</button><button data-m="cara">Cara</button></div>
           <div class="inctgt" id="incTgt">Selecciona un punto para ver la elevación objetivo.</div>
           <div class="incdelta" id="incDelta"></div>
+          <div class="tgtbtns">
+            <button class="btn" id="incSetTgt">Fijar objetivo = lectura</button>
+            <button class="btn ghost" id="incAutoTgt">Auto</button>
+          </div>
         </div>
         <div class="inclevel"><div class="lvtarget"></div><div class="lvbub" id="incBub"></div></div>
         <div class="incsub" style="text-align:center" id="incRollTxt">nivel —</div>
@@ -343,7 +353,7 @@
           <button class="btn" id="incCal">Calibrar 0°</button>
           <button class="btn ghost" id="incReset">Quitar calibración</button>
         </div>
-        <p class="note">Apoya <b>cualquier lado o cara</b> del teléfono contra el brazo del LNB o el dorso del plato (da igual la orientación y el sentido de giro) y lee la inclinación. En platos <b>offset</b> el ángulo mecánico no es igual a la elevación: usa la escala del plato o suma el ángulo de offset del fabricante. La burbuja central indica cuándo el teléfono está a nivel/plomo.</p>
+        <p class="note"><b>Canto:</b> apoya el borde del teléfono contra el dorso del plato o el brazo (como tu clinómetro) y lee el ángulo respecto a la vertical. <b>Cara:</b> apoya el teléfono plano sobre la superficie. Funciona en cualquier orientación y sentido de giro. En platos <b>offset</b> usa <b>Fijar objetivo = lectura</b> cuando el plato ya esté bien apuntado (verificado por señal) para repetir el mismo ángulo en otras instalaciones. La burbuja central indica el nivel/plomo.</p>
       </div>
     </div>
   </div>
@@ -698,7 +708,7 @@ window.addEventListener('online',updNet);window.addEventListener('offline',updNe
 
 /* ===================== Inclinómetro ===================== */
 const incOverlay=document.getElementById('incOverlay');
-let incOn=false, incBeta=0, incGamma=0, incZero=0, incTarget=null, incMsg='', incPend=false;
+let incOn=false, incBeta=0, incGamma=0, incZero=0, incTarget=null, incMsg='', incPend=false, incMode='canto', incTgtManual=null;
 function incOrient(e){ if(e.beta==null)return; incBeta=e.beta; incGamma=e.gamma||0;
   if(!incPend){incPend=true;requestAnimationFrame(()=>{incPend=false;drawInc();});} }
 function startIncSensors(){ if(!incOn){window.addEventListener('deviceorientation',incOrient,true);incOn=true;}
@@ -712,11 +722,15 @@ function reqIncPerm(){
   else { showIncPerm('Este dispositivo no expone sensores de inclinación.'); }
 }
 function clampBeam(a){return Math.max(-12,Math.min(102,a));}
-// Inclinación de la cara del teléfono respecto a la horizontal:
-// combina ambos ejes -> sirve apoyando cualquier lado y girando horario/antihorario.
+// Inclinación de la cara del teléfono respecto a la horizontal (combina ambos ejes ->
+// sirve apoyando cualquier lado y girando horario/antihorario):
 function tiltFlat(b,g){const D=Math.PI/180;let c=Math.cos(b*D)*Math.cos(g*D);c=Math.max(-1,Math.min(1,c));return Math.acos(c)/D;}
+// Lectura por modo: 'canto' = ángulo del borde respecto a la vertical (90 - cara);
+// 'cara' = inclinación de la cara plana respecto a la horizontal.
+function rawTilt(){const tf=tiltFlat(incBeta,incGamma); return incMode==='canto'? 90-tf : tf;}
+function effTarget(){ return incTgtManual!=null? incTgtManual : incTarget; }
 function drawInc(){
-  const raw=tiltFlat(incBeta,incGamma), ang=raw-incZero;
+  const ang=rawTilt()-incZero;
   document.getElementById('incAng').textContent=ang.toFixed(1);
   document.getElementById('incBeam').setAttribute('transform',`rotate(${-clampBeam(ang)} 50 130)`);
   const bub=document.getElementById('incBub'), k=34/30;
@@ -725,11 +739,13 @@ function drawInc(){
   const lvl=Math.hypot(incBeta,incGamma)<1.5; bub.style.background=lvl?'var(--ok)':'var(--warn)';
   document.getElementById('incRollTxt').textContent= lvl?'a nivel ✓':`fuera de nivel ${Math.hypot(incBeta,incGamma).toFixed(1)}°`;
   const now=document.getElementById('incNow'),tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tb=document.getElementById('incTgtBeam');
-  if(incTarget!=null){
-    tb.style.display=''; tb.setAttribute('transform',`rotate(${-clampBeam(incTarget)} 50 130)`);
-    document.getElementById('incTgtLbl').textContent=incTarget.toFixed(0)+'°';
-    tgt.innerHTML=`Objetivo: <b>${incTarget.toFixed(1)}°</b> · ${SATS[active].name}`;
-    const d=ang-incTarget;
+  const T=effTarget();
+  if(T!=null){
+    tb.style.display=''; tb.setAttribute('transform',`rotate(${-clampBeam(T)} 50 130)`);
+    document.getElementById('incTgtLbl').textContent=T.toFixed(0)+'°';
+    const src= incTgtManual!=null? 'fijado' : `elev. ${SATS[active].name}`;
+    tgt.innerHTML=`Objetivo: <b>${T.toFixed(1)}°</b> · ${src}`;
+    const d=ang-T;
     if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';now.classList.add('match');}
     else{del.textContent=`${d>0?'baja':'sube'} ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';now.classList.remove('match');}
   }else{
@@ -747,8 +763,17 @@ document.getElementById('btnInc').onclick=openInc;
 document.getElementById('incClose').onclick=closeInc;
 incOverlay.addEventListener('click',e=>{if(e.target===incOverlay)closeInc();});
 document.getElementById('incEnable').onclick=reqIncPerm;
-document.getElementById('incCal').onclick=()=>{incZero=tiltFlat(incBeta,incGamma);drawInc();};
+document.getElementById('incCal').onclick=()=>{incZero=rawTilt();drawInc();};
 document.getElementById('incReset').onclick=()=>{incZero=0;drawInc();};
+document.getElementById('incMode').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-m]'); if(!b)return;
+  incMode=b.dataset.m; incZero=0;
+  document.querySelectorAll('#incMode button').forEach(x=>x.classList.toggle('on',x===b));
+  document.getElementById('incModeSub').textContent= incMode==='canto'?'ángulo del canto · respecto a la vertical':'inclinación de la cara · respecto a la horizontal';
+  drawInc();
+});
+document.getElementById('incSetTgt').onclick=()=>{ incTgtManual=rawTilt()-incZero; drawInc(); };
+document.getElementById('incAutoTgt').onclick=()=>{ incTgtManual=null; drawInc(); };
 
 /* ===================== PWA + SW ===================== */
 (function(){try{
