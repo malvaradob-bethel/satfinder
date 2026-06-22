@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Apuntar Sat" />
-<title>Apuntamiento Satelital · Unidad Técnica</title>
+<title>Dishpointer Bethel · Unidad Técnica</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
@@ -172,6 +172,18 @@
   .incmode button.on{background:var(--vector);color:#fff}
   .tgtbtns{display:flex;gap:8px;justify-content:center;margin-top:8px}
   .tgtbtns .btn{padding:5px 11px;font-size:11px}
+  .incoffset{margin:14px 0 4px;border-top:1px solid var(--line);padding-top:13px}
+  .offpresets{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .offpresets button{background:var(--surf);color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:600 11px/1 system-ui;cursor:pointer}
+  .offpresets button.on{background:var(--vector);color:#fff;border-color:var(--vector)}
+  .offmanrow{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:9px;flex-wrap:wrap}
+  .offmanrow label,.offmeas label{font-size:12px;color:var(--muted);display:inline-flex;gap:6px;align-items:center}
+  .offmanrow input,.offmeas input{width:74px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--txt);padding:5px 7px;font:600 13px var(--mono)}
+  .offcalc{margin-top:11px;background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .offdiag{width:100%;max-width:220px;display:block;margin:0 auto 8px}
+  .offmeas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:9px}
+  .offcalc .btn{width:100%}
+  .offcalc .note{margin-top:9px}
   .note{font-size:10.5px;color:var(--muted2);line-height:1.5;margin:2px 2px 0}
   .note b{color:var(--muted)}
 
@@ -233,7 +245,7 @@
 
 <div class="topbar">
   <div class="brand"><span class="dot"></span>
-    <h1>Apuntamiento Satelital<small>Red Nacional · Unidad Técnica</small></h1></div>
+    <h1>Dishpointer Bethel<small>Telecomunicaciones · Unidad Técnica</small></h1></div>
   <div class="sp"></div>
 </div>
 
@@ -345,6 +357,37 @@
           <div class="tgtbtns">
             <button class="btn" id="incSetTgt">Fijar objetivo = lectura</button>
             <button class="btn ghost" id="incAutoTgt">Auto</button>
+          </div>
+        </div>
+        <div class="incoffset">
+          <div class="incsub" style="text-align:center;margin-bottom:7px">Offset del plato (corrige el objetivo Auto)</div>
+          <div class="offpresets" id="offPresets">
+            <button data-off="22.5" class="on">Bethel 1.2m · 22.5°</button>
+            <button data-off="24.5">Claro/Movistar 60cm · 24.5°</button>
+            <button data-off="0">Sin offset</button>
+            <button data-off="manual">Manual</button>
+          </div>
+          <div class="offmanrow" id="offManRow" style="display:none">
+            <label>Offset° <input type="number" id="offInput" value="22.5" min="0" max="40" step="0.1"></label>
+            <button class="btn ghost" id="offCalcToggle">Calcular por medidas</button>
+          </div>
+          <div class="offcalc" id="offCalc" style="display:none">
+            <svg viewBox="0 0 210 150" class="offdiag" aria-label="Medidas del plato">
+              <ellipse cx="95" cy="70" rx="44" ry="60" fill="rgba(159,216,255,.12)" stroke="#9fd8ff" stroke-width="2"/>
+              <line x1="51" y1="70" x2="139" y2="70" stroke="var(--vector)" stroke-width="1.6"/>
+              <polygon points="51,70 60,66 60,74" fill="var(--vector)"/><polygon points="139,70 130,66 130,74" fill="var(--vector)"/>
+              <text x="95" y="63" text-anchor="middle" class="dc">Ancho W</text>
+              <line x1="170" y1="10" x2="170" y2="130" stroke="var(--ok)" stroke-width="1.6"/>
+              <polygon points="170,10 166,19 174,19" fill="var(--ok)"/><polygon points="170,130 166,121 174,121" fill="var(--ok)"/>
+              <text x="190" y="74" text-anchor="middle" class="dc" transform="rotate(90 190 74)">Alto H</text>
+            </svg>
+            <div class="offmeas">
+              <label>Ancho W (cm) <input type="number" id="offW" min="1" step="0.1"></label>
+              <label>Alto H (cm) <input type="number" id="offH" min="1" step="0.1"></label>
+            </div>
+            <div class="incsub" id="offCalcRes" style="text-align:center;margin-bottom:8px">offset = —</div>
+            <button class="btn" id="offCalcUse">Usar este offset</button>
+            <p class="note">El plato offset es más <b>alto que ancho</b>; esa relación define el offset: <b>arccos(ancho ÷ alto)</b>. Mide el contorno metálico (no el aro). Verificado con tus platos: 120×130 cm → 22.6°, 60×66 cm → 24.5°.</p>
           </div>
         </div>
         <div class="inclevel"><div class="lvtarget"></div><div class="lvbub" id="incBub"></div></div>
@@ -708,7 +751,7 @@ window.addEventListener('online',updNet);window.addEventListener('offline',updNe
 
 /* ===================== Inclinómetro ===================== */
 const incOverlay=document.getElementById('incOverlay');
-let incOn=false, incBeta=0, incGamma=0, incZero=0, incTarget=null, incMsg='', incPend=false, incMode='canto', incTgtManual=null;
+let incOn=false, incBeta=0, incGamma=0, incZero=0, incElev=null, incMsg='', incPend=false, incMode='canto', incTgtManual=null, incOffset=22.5;
 function incOrient(e){ if(e.beta==null)return; incBeta=e.beta; incGamma=e.gamma||0;
   if(!incPend){incPend=true;requestAnimationFrame(()=>{incPend=false;drawInc();});} }
 function startIncSensors(){ if(!incOn){window.addEventListener('deviceorientation',incOrient,true);incOn=true;}
@@ -728,7 +771,11 @@ function tiltFlat(b,g){const D=Math.PI/180;let c=Math.cos(b*D)*Math.cos(g*D);c=M
 // Lectura por modo: 'canto' = ángulo del borde respecto a la vertical (90 - cara);
 // 'cara' = inclinación de la cara plana respecto a la horizontal.
 function rawTilt(){const tf=tiltFlat(incBeta,incGamma); return incMode==='canto'? 90-tf : tf;}
-function effTarget(){ return incTgtManual!=null? incTgtManual : incTarget; }
+// Objetivo mecánico = elevación del haz corregida por el offset del plato.
+// canto (dorso respecto a la vertical) = E - offset ; cara (respecto a la horizontal) = 90 - (E - offset).
+function mechTarget(){ if(incElev==null)return null; const m=incElev-incOffset;
+  return incMode==='canto'? Math.max(0,Math.min(90,m)) : Math.max(0,Math.min(90,90-m)); }
+function effTarget(){ return incTgtManual!=null? incTgtManual : mechTarget(); }
 function drawInc(){
   const ang=rawTilt()-incZero;
   document.getElementById('incAng').textContent=ang.toFixed(1);
@@ -743,8 +790,8 @@ function drawInc(){
   if(T!=null){
     tb.style.display=''; tb.setAttribute('transform',`rotate(${-clampBeam(T)} 50 130)`);
     document.getElementById('incTgtLbl').textContent=T.toFixed(0)+'°';
-    const src= incTgtManual!=null? 'fijado' : `elev. ${SATS[active].name}`;
-    tgt.innerHTML=`Objetivo: <b>${T.toFixed(1)}°</b> · ${src}`;
+    const src= incTgtManual!=null? 'fijado manual' : `${SATS[active].name}: elev ${incElev.toFixed(0)}° − offset ${incOffset.toFixed(1)}°`;
+    tgt.innerHTML=`Objetivo (${incMode}): <b>${T.toFixed(1)}°</b><br><span style="font-size:11px;color:var(--muted2)">${src}</span>`;
     const d=ang-T;
     if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';now.classList.add('match');}
     else{del.textContent=`${d>0?'baja':'sube'} ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';now.classList.remove('match');}
@@ -754,8 +801,8 @@ function drawInc(){
   }
 }
 function openInc(){
-  incTarget=null; incMsg='';
-  if(pt){const el=lookAngles(pt.lat,pt.lng,SATS[active].lon).el; if(el>0)incTarget=el; else incMsg=`${SATS[active].name} está bajo el horizonte en este punto.`;}
+  incElev=null; incMsg='';
+  if(pt){const el=lookAngles(pt.lat,pt.lng,SATS[active].lon).el; if(el>0)incElev=el; else incMsg=`${SATS[active].name} está bajo el horizonte en este punto.`;}
   incOverlay.classList.add('show'); drawInc(); reqIncPerm();
 }
 function closeInc(){ incOverlay.classList.remove('show'); if(incOn){window.removeEventListener('deviceorientation',incOrient,true);incOn=false;} }
@@ -774,6 +821,32 @@ document.getElementById('incMode').addEventListener('click',e=>{
 });
 document.getElementById('incSetTgt').onclick=()=>{ incTgtManual=rawTilt()-incZero; drawInc(); };
 document.getElementById('incAutoTgt').onclick=()=>{ incTgtManual=null; drawInc(); };
+// Offset del plato
+document.getElementById('offPresets').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-off]'); if(!b)return;
+  document.querySelectorAll('#offPresets button').forEach(x=>x.classList.toggle('on',x===b));
+  const man=document.getElementById('offManRow');
+  if(b.dataset.off==='manual'){ man.style.display='flex'; incOffset=parseFloat(document.getElementById('offInput').value)||0; }
+  else { man.style.display='none'; document.getElementById('offCalc').style.display='none'; incOffset=parseFloat(b.dataset.off); }
+  drawInc();
+});
+document.getElementById('offInput').addEventListener('input',e=>{ incOffset=parseFloat(e.target.value)||0; drawInc(); });
+document.getElementById('offCalcToggle').onclick=()=>{ const c=document.getElementById('offCalc'); c.style.display=(c.style.display==='none'||!c.style.display)?'block':'none'; };
+function calcOff(){
+  const w=parseFloat(document.getElementById('offW').value), h=parseFloat(document.getElementById('offH').value), res=document.getElementById('offCalcRes');
+  if(!(w>0&&h>0)){ res.textContent='offset = —'; return null; }
+  const off=Math.acos(Math.min(w,h)/Math.max(w,h))*180/Math.PI;
+  res.innerHTML=`offset = <b>${off.toFixed(1)}°</b>`; return off;
+}
+document.getElementById('offW').addEventListener('input',calcOff);
+document.getElementById('offH').addEventListener('input',calcOff);
+document.getElementById('offCalcUse').onclick=()=>{
+  const off=calcOff(); if(off==null)return;
+  incOffset=Math.round(off*10)/10; document.getElementById('offInput').value=incOffset;
+  document.querySelectorAll('#offPresets button').forEach(x=>x.classList.toggle('on',x.dataset.off==='manual'));
+  document.getElementById('offManRow').style.display='flex';
+  drawInc();
+};
 
 /* ===================== PWA + SW ===================== */
 (function(){try{
@@ -783,7 +856,7 @@ document.getElementById('incAutoTgt').onclick=()=>{ incTgtManual=null; drawInc()
   x.beginPath();x.moveTo(256,300);x.lineTo(360,150);x.stroke();
   x.fillStyle='#f5b301';x.beginPath();x.arc(360,150,30,0,7);x.fill();
   const icon=c.toDataURL('image/png');
-  const man={name:'Apuntamiento Satelital',short_name:'Apuntar Sat',display:'standalone',
+  const man={name:'Dishpointer Bethel',short_name:'Dishpointer',display:'standalone',
     background_color:'#0c1118',theme_color:'#0c1118',start_url:'.',
     icons:[{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
   const url=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
