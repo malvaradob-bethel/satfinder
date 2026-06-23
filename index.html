@@ -901,8 +901,8 @@ function drawInc(){
   const ip=Math.hypot(gAx,gAy);
   if(ip>=1.2){ incLastRoll=clinoRoll(); incLastAng=clinoReading(); }
   const ang=incLastAng;
-  let roll=incLastRoll; if(roll>90)roll-=180; else if(roll<-90)roll+=180; // plegado: cápsula nunca de cabeza
-  document.getElementById('incInd').setAttribute('transform',`rotate(${roll.toFixed(1)} 120 120)`);
+  let roll=incLastRoll; if(roll>90)roll-=180; else if(roll<-90)roll+=180; // plegado a ±90
+  document.getElementById('incInd').setAttribute('transform',`rotate(${(-roll).toFixed(1)} 120 120)`); // contra-giro: cápsula siempre horizontal
   const big=document.getElementById('incBig');
   const disp=Math.round(ang*2)/2; big.textContent=disp.toFixed(1);
   const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta');
