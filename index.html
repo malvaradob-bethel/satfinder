@@ -361,22 +361,19 @@
         <svg class="incgauge" viewBox="0 0 240 240" aria-label="Inclinómetro">
           <circle cx="120" cy="120" r="118" fill="#0e1420" stroke="#39434f" stroke-width="4"/>
           <circle cx="120" cy="120" r="112" fill="rgba(17,25,36,.6)" stroke="#222c3a" stroke-width="2"/>
-          <g id="incDisc">
-            <g id="incTicks"></g>
-            <g id="incTgtMark" style="display:none"><polygon points="120,30 113,46 127,46" fill="var(--ok)"/></g>
-            <g id="incCapsuleG">
-              <rect x="40" y="106" width="30" height="28" rx="6" fill="#e9edf2" stroke="#94a0ae" stroke-width="1.2"/>
-              <line x1="45" y1="120" x2="65" y2="120" stroke="#e0353f" stroke-width="1.6"/>
-              <rect x="76" y="99" width="88" height="42" rx="12" fill="#f4f6f9" stroke="#aab4c0" stroke-width="1.5"/>
-              <text id="incBig" x="116" y="131" text-anchor="middle" class="gaugenum">90</text>
-              <text x="154" y="113" class="gaugedeg">°</text>
-              <rect x="170" y="106" width="30" height="28" rx="6" fill="#e9edf2" stroke="#94a0ae" stroke-width="1.2"/>
-              <line x1="175" y1="120" x2="195" y2="120" stroke="#e0353f" stroke-width="1.6"/>
-            </g>
+          <g id="incScale"></g>
+          <g id="incTgtMark" style="display:none"></g>
+          <g id="incInd">
+            <polygon id="incNeedle" points="120,22 114,100 126,100" fill="var(--vector)"/>
+            <rect x="78" y="101" width="84" height="38" rx="11" fill="#f4f6f9" stroke="#aab4c0" stroke-width="1.5"/>
+            <rect x="44" y="108" width="26" height="24" rx="5" fill="#e9edf2" stroke="#94a0ae" stroke-width="1"/>
+            <line x1="48" y1="120" x2="66" y2="120" stroke="#e0353f" stroke-width="1.4"/>
+            <rect x="170" y="108" width="26" height="24" rx="5" fill="#e9edf2" stroke="#94a0ae" stroke-width="1"/>
+            <line x1="174" y1="120" x2="192" y2="120" stroke="#e0353f" stroke-width="1.4"/>
           </g>
-          <g id="incNeedle"><polygon points="120,28 115,110 125,110" fill="var(--vector)"/></g>
-          <circle cx="120" cy="120" r="7" fill="#11192e" stroke="#5a6675" stroke-width="2"/>
-          <polygon points="120,7 113,20 127,20" fill="#cdd6e2"/>
+          <text id="incBig" x="118" y="130" text-anchor="middle" class="gaugenum">90</text>
+          <text id="incDeg" x="151" y="116" text-anchor="middle" class="gaugedeg">°</text>
+          <polygon points="120,6 113,19 127,19" fill="#cdd6e2"/>
         </svg>
         <button class="btn freeze" id="incFreeze">⏸ Congelar lectura</button>
         <div class="incread">
@@ -808,28 +805,27 @@ function reqIncPerm(){
 // Dirección de la gravedad DENTRO del plano de la pantalla = giro del teléfono mirándote.
 // Ignora el cabeceo (componente fuera del plano), por eso inclinar la cara no afecta.
 function clinoRoll(){ return Math.atan2(gAx, -gAy)*180/Math.PI; } // -180..180
-function clinoReading(){
-  let r=Math.abs(clinoRoll()); if(r>90) r=180-r;        // pliega: 0 = eje largo vertical, 90 = horizontal
-  return incZeroRef==='vertical' ? r : (90-r);          // toggle de referencia (0° en vertical u horizontal)
-}
+function readForRoll(roll){ let r=Math.abs(roll); if(r>90) r=180-r; return incZeroRef==='vertical'? r : (90-r); }
+function clinoReading(){ return readForRoll(clinoRoll()); }
 function rawTilt(){ return clinoReading(); }
 // Objetivo del plato offset según la referencia elegida.
 function mechTarget(){ if(incElev==null)return null; const m=incElev-incOffset;
   const v=incZeroRef==='vertical' ? (90-m) : m; return Math.max(0,Math.min(90,v)); }
 function effTarget(){ return incTgtManual!=null? incTgtManual : mechTarget(); }
-// Escala tipo transportador: 0° en los lados, 90° arriba/abajo (círculo completo).
-function buildIncTicks(){
-  const g=document.getElementById('incTicks'); if(!g||g.childElementCount)return;
+// Escala FIJA de fondo (no gira). 90 arriba (horizontal) ó 0 arriba (vertical). Etiquetas cada 30°.
+function buildIncScale(){
+  const g=document.getElementById('incScale'); if(!g)return; g.innerHTML='';
   const NS='http://www.w3.org/2000/svg', C=120;
-  for(let s=0;s<360;s+=5){
-    const maj=(s%15===0), r1=104, r2=maj?86:96, a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
+  for(let s=0;s<360;s+=10){
+    const maj=(s%30===0), r1=104, r2=maj?90:98, a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
     const ln=document.createElementNS(NS,'line');
     ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
     ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
     ln.setAttribute('class',maj?'tickmaj':'tick'); g.appendChild(ln);
-    if(maj){const inc=90-Math.abs(90-(s%180)); const t=document.createElementNS(NS,'text');
-      t.setAttribute('x',(C+74*cx).toFixed(1)); t.setAttribute('y',(C-74*sy+4).toFixed(1));
-      t.setAttribute('text-anchor','middle'); t.setAttribute('class','tk'); t.textContent=inc; g.appendChild(t);}
+    if(maj){ let v=90-Math.abs(90-(s%180)); if(incZeroRef==='vertical') v=90-v;
+      const t=document.createElementNS(NS,'text');
+      t.setAttribute('x',(C+76*cx).toFixed(1)); t.setAttribute('y',(C-76*sy+4).toFixed(1));
+      t.setAttribute('text-anchor','middle'); t.setAttribute('class','tk'); t.textContent=v; g.appendChild(t);}
   }
 }
 function showIncView(){
@@ -850,14 +846,17 @@ function drawInc(){
     return;
   }
   const ip=Math.hypot(gAx,gAy);
-  if(ip>=1.2){ incLastRoll=Math.atan2(gAx,gAy)*180/Math.PI; incLastAng=clinoReading(); }
+  if(ip>=1.2){ incLastRoll=clinoRoll(); incLastAng=clinoReading(); }
   const ang=incLastAng, roll=incLastRoll;
-  document.getElementById('incDisc').setAttribute('transform',`rotate(${roll.toFixed(1)} 120 120)`);
-  const big=document.getElementById('incBig'); big.textContent=Math.round(ang);
+  document.getElementById('incInd').setAttribute('transform',`rotate(${roll.toFixed(1)} 120 120)`);
+  const big=document.getElementById('incBig');
+  const disp=Math.round(ang*2)/2; big.textContent=Number.isInteger(disp)?String(disp):disp.toFixed(1);
   const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tm=document.getElementById('incTgtMark');
   const T=effTarget();
   if(T!=null){
-    tm.style.display=''; tm.setAttribute('transform',`rotate(${(90-T).toFixed(1)} 120 120)`);
+    const phi=(incZeroRef==='vertical')?T:(90-T);
+    tm.style.display='';
+    tm.innerHTML=`<polygon points="120,14 113,30 127,30" fill="var(--ok)" transform="rotate(${phi.toFixed(1)} 120 120)"/><polygon points="120,14 113,30 127,30" fill="var(--ok)" transform="rotate(${(-phi).toFixed(1)} 120 120)"/>`;
     const src= incTgtManual!=null? 'fijado manual' : `${SATS[active].name}: elev ${incElev.toFixed(0)}° − offset ${incOffset.toFixed(1)}°`;
     tgt.innerHTML=`Objetivo: <b>${T.toFixed(1)}°</b><br><span style="font-size:11px;color:var(--muted2)">${src}</span>`;
     const d=ang-T;
@@ -871,7 +870,7 @@ function drawInc(){
 function openInc(){
   incElev=null; incMsg=''; incFrozen=false; incView='clino';
   const fb=document.getElementById('incFreeze'); fb.classList.remove('on'); fb.textContent='⏸ Congelar lectura';
-  buildIncTicks(); showIncView();
+  buildIncScale(); showIncView();
   if(pt){const el=lookAngles(pt.lat,pt.lng,SATS[active].lon).el; if(el>0)incElev=el; else incMsg=`${SATS[active].name} está bajo el horizonte en este punto.`;}
   incOverlay.classList.add('show'); drawInc(); reqIncPerm();
 }
@@ -885,7 +884,7 @@ document.getElementById('incModeBtns').addEventListener('click',e=>{
 });
 document.getElementById('incRefBtns').addEventListener('click',e=>{
   const b=e.target.closest('button[data-r]'); if(!b)return; incZeroRef=b.dataset.r;
-  document.querySelectorAll('#incRefBtns button').forEach(x=>x.classList.toggle('on',x===b)); drawInc();
+  document.querySelectorAll('#incRefBtns button').forEach(x=>x.classList.toggle("on",x===b)); buildIncScale(); drawInc();
 });
 document.getElementById('incFreeze').onclick=()=>{
   incFrozen=!incFrozen; const b=document.getElementById('incFreeze');
