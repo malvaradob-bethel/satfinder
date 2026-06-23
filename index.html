@@ -173,11 +173,11 @@
   .incgauge line.tickmaj{stroke:#2b333c;stroke-width:2.6}
   .incgauge line.tickpct{stroke:#b4bcc6;stroke-width:1}
   #incScaleRot{transform-box:view-box;transform-origin:120px 120px;transition:transform .55s cubic-bezier(.34,.08,.18,1)}
-  .increftoggle{display:flex;align-items:center;justify-content:center;gap:9px;margin:8px 0}
-  .reftogglebtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#161d28;color:#cdd6e2;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,background .2s}
-  .reftogglebtn:active{transform:scale(.92)}
-  .reftogglebtn[aria-pressed="true"]{background:#1d2735;color:#7fd6ff;border-color:#2e4256}
-  .refstate{font:700 12px var(--mono);color:var(--muted2);min-width:74px}
+  .gaugewrap{position:relative;max-width:290px;margin:0 auto 8px}
+  .gaugewrap .incgauge{margin:0 auto}
+  .reftogglebtn{position:absolute;top:4px;right:4px;z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(20,27,38,.82);backdrop-filter:blur(3px);color:#cdd6e2;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35);transition:transform .15s,background .2s,color .2s}
+  .reftogglebtn:active{transform:scale(.9)}
+  .reftogglebtn[aria-pressed="true"]{background:rgba(29,39,53,.9);color:#7fd6ff;border-color:#2e4256}
   .btn.freeze{display:block;width:100%;margin:0 0 12px}
   .btn.freeze.on{background:var(--warn);color:#10151f;border-color:var(--warn)}
   .incbtns{display:flex;gap:9px;margin:14px 0 6px}
@@ -366,6 +366,10 @@
         </div>
         <div class="incmodetag" id="incModeTag">CLINÓMETRO</div>
         <div id="incAngleView">
+        <div class="gaugewrap">
+        <button id="incRefToggle" class="reftogglebtn" title="Girar 90°: alterna 0°/90° arriba" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 5V2L7.5 6.5 12 11V7.5a4.5 4.5 0 1 1-4.5 4.5H5A7 7 0 1 0 12 5z" fill="currentColor"/></svg>
+        </button>
         <svg class="incgauge" viewBox="0 0 240 240" aria-label="Inclinómetro">
           <defs>
             <radialGradient id="igFace" cx="50%" cy="38%" r="78%">
@@ -394,7 +398,6 @@
           <circle cx="120" cy="120" r="110" fill="#2b333c"/>
           <circle cx="120" cy="120" r="107" fill="url(#igFace)"/>
           <g id="incScaleRot"><g id="incScale"></g></g>
-          <g id="incLabels"></g>
           <g id="incTgtMark" style="display:none"></g>
           <g id="incInd">
             <polygon id="incNeedle" points="120,24 116,128 124,128" fill="url(#igNeedle)" filter="url(#igShadow)"/>
@@ -409,18 +412,12 @@
             <text id="incBig" x="116" y="129" text-anchor="middle" class="gaugenum">90.0</text>
             <text id="incDeg" x="158" y="110" text-anchor="middle" class="gaugedeg">°</text>
           </g>
-          <circle cx="120" cy="120" r="6" fill="url(#igPivot)" stroke="#6b7682" stroke-width="0.8"/>
           <polygon points="120,4 112,19 128,19" fill="#2b333c"/>
         </svg>
+        </div>
         <button class="btn freeze" id="incFreeze">⏸ Congelar lectura</button>
         <div class="incread">
           <div class="incsub">teléfono de plano mirándote · gíralo sobre su centro</div>
-          <div class="increftoggle">
-            <button id="incRefToggle" class="reftogglebtn" title="Girar referencia 90°" aria-pressed="false">
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 5V2L7.5 6.5 12 11V7.5a4.5 4.5 0 1 1-4.5 4.5H5A7 7 0 1 0 12 5z" fill="currentColor"/></svg>
-            </button>
-            <span class="refstate" id="incRefState">90° arriba</span>
-          </div>
           <div class="inctgt" id="incTgt">Selecciona un punto para ver la elevación objetivo.</div>
           <div class="incdelta" id="incDelta"></div>
           <div class="tgtbtns">
@@ -851,43 +848,39 @@ function rawTilt(){ return clinoReading(); }
 function mechTarget(){ if(incElev==null)return null; const m=incElev-incOffset;
   const v=incZeroRef==='vertical' ? (90-m) : m; return Math.max(0,Math.min(90,v)); }
 function effTarget(){ return incTgtManual!=null? incTgtManual : mechTarget(); }
-// Escala: ticks finos (cada 3°), medios (15°) y mayores (45°) + arco interno de %.
-// Los ticks viven en #incScaleRot (gira 90° al cambiar de referencia). Las etiquetas (90/45/0)
-// se reconstruyen verticales según el modo para que siempre se lean derechas.
+// Escala: ticks finos (3°), medios (15°), mayores (45°) + arco de % + etiquetas RADIALES.
+// Todo vive en #incScaleRot y gira 90° al cambiar la referencia (intercambia 0°/90° arriba).
 function buildIncScale(){
-  const sc=document.getElementById('incScale'), lb=document.getElementById('incLabels');
-  if(!sc||!lb)return; const NS='http://www.w3.org/2000/svg', C=120;
-  if(!sc.childElementCount){
-    for(let s=0;s<360;s+=3){
-      const maj=(s%45===0), mid=(s%15===0), r1=105, r2=maj?87:(mid?94:100);
-      const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
-      const ln=document.createElementNS(NS,'line');
-      ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
-      ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
-      ln.setAttribute('class',maj?'tickmaj':(mid?'tickmid':'tick')); sc.appendChild(ln);
-    }
-    for(let s=18;s<=162;s+=6){ if(s>=84&&s<=96)continue;
-      const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a), r1=79,r2=(s%18===0)?71:74;
-      const ln=document.createElementNS(NS,'line');
-      ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
-      ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
-      ln.setAttribute('class','tickpct'); sc.appendChild(ln);
-    }
+  const sc=document.getElementById('incScale'); if(!sc||sc.childElementCount)return;
+  const NS='http://www.w3.org/2000/svg', C=120;
+  for(let s=0;s<360;s+=3){
+    const maj=(s%45===0), mid=(s%15===0), r1=105, r2=maj?87:(mid?94:100);
+    const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
+    const ln=document.createElementNS(NS,'line');
+    ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
+    ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
+    ln.setAttribute('class',maj?'tickmaj':(mid?'tickmid':'tick')); sc.appendChild(ln);
   }
-  lb.innerHTML=''; const vert=incZeroRef==='vertical';
-  const top=vert?'0°':'90°', side=vert?'90°':'0°';
-  const defs=[[90,top,18,70],[270,top,18,70],[45,'45°',13,84],[135,'45°',13,84],[225,'45°',13,84],[315,'45°',13,84],[0,side,15,92],[180,side,15,92]];
-  defs.forEach(([s,txt,fs,R])=>{ const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
+  for(let s=18;s<=162;s+=6){ if(s>=84&&s<=96)continue;
+    const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a), r1=79,r2=(s%18===0)?71:74;
+    const ln=document.createElementNS(NS,'line');
+    ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
+    ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
+    ln.setAttribute('class','tickpct'); sc.appendChild(ln);
+  }
+  const labs=[[90,'90°',17],[270,'90°',17],[0,'0°',15],[180,'0°',15],[45,'45°',13],[135,'45°',13],[225,'45°',13],[315,'45°',13]];
+  labs.forEach(([s,txt,fs])=>{ const a=s*Math.PI/180, R=82, x=C+R*Math.cos(a), y=C-R*Math.sin(a);
     const t=document.createElementNS(NS,'text');
-    t.setAttribute('x',(C+R*cx).toFixed(1)); t.setAttribute('y',(C-R*sy+fs*0.35).toFixed(1));
-    t.setAttribute('text-anchor','middle'); t.setAttribute('class','tk'); t.setAttribute('style','font-size:'+fs+'px');
-    t.textContent=txt; lb.appendChild(t); });
+    t.setAttribute('x',x.toFixed(1)); t.setAttribute('y',y.toFixed(1));
+    t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','central');
+    t.setAttribute('class','tk'); t.setAttribute('style','font-size:'+fs+'px');
+    t.setAttribute('transform','rotate('+(90-s).toFixed(1)+' '+x.toFixed(1)+' '+y.toFixed(1)+')');
+    t.textContent=txt; sc.appendChild(t); });
 }
 function setIncRef(ref){
   incZeroRef=ref;
   const r=document.getElementById('incScaleRot'); if(r) r.style.transform='rotate('+(ref==='vertical'?90:0)+'deg)';
   const tb=document.getElementById('incRefToggle'); if(tb) tb.setAttribute('aria-pressed', ref==='vertical');
-  const st=document.getElementById('incRefState'); if(st) st.textContent= ref==='vertical'?'0° arriba':'90° arriba';
   buildIncScale(); drawInc();
 }
 function showIncView(){
