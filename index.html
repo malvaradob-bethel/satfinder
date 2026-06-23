@@ -398,7 +398,6 @@
           <circle cx="120" cy="120" r="110" fill="#2b333c"/>
           <circle cx="120" cy="120" r="107" fill="url(#igFace)"/>
           <g id="incScaleRot"><g id="incScale"></g></g>
-          <g id="incTgtMark" style="display:none"></g>
           <g id="incInd">
             <polygon id="incNeedle" points="120,24 116,128 124,128" fill="url(#igNeedle)" filter="url(#igShadow)"/>
             <g filter="url(#igShadow)">
@@ -412,7 +411,6 @@
             <text id="incBig" x="116" y="129" text-anchor="middle" class="gaugenum">90.0</text>
             <text id="incDeg" x="158" y="110" text-anchor="middle" class="gaugedeg">°</text>
           </g>
-          <polygon points="120,4 112,19 128,19" fill="#2b333c"/>
         </svg>
         </div>
         <button class="btn freeze" id="incFreeze">⏸ Congelar lectura</button>
@@ -902,23 +900,21 @@ function drawInc(){
   }
   const ip=Math.hypot(gAx,gAy);
   if(ip>=1.2){ incLastRoll=clinoRoll(); incLastAng=clinoReading(); }
-  const ang=incLastAng, roll=incLastRoll;
+  const ang=incLastAng;
+  let roll=incLastRoll; if(roll>90)roll-=180; else if(roll<-90)roll+=180; // plegado: cápsula nunca de cabeza
   document.getElementById('incInd').setAttribute('transform',`rotate(${roll.toFixed(1)} 120 120)`);
   const big=document.getElementById('incBig');
   const disp=Math.round(ang*2)/2; big.textContent=disp.toFixed(1);
-  const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tm=document.getElementById('incTgtMark');
+  const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta');
   const T=effTarget();
   if(T!=null){
-    const phi=(incZeroRef==='vertical')?T:(90-T);
-    tm.style.display='';
-    tm.innerHTML=`<polygon points="120,13 112,31 128,31" fill="#12a046" stroke="#0c7a34" stroke-width="0.6" transform="rotate(${phi.toFixed(1)} 120 120)"/><polygon points="120,13 112,31 128,31" fill="#12a046" stroke="#0c7a34" stroke-width="0.6" transform="rotate(${(-phi).toFixed(1)} 120 120)"/>`;
     const src= incTgtManual!=null? 'fijado manual' : `${SATS[active].name}: elev ${incElev.toFixed(0)}° − offset ${incOffset.toFixed(1)}°`;
     tgt.innerHTML=`Objetivo: <b>${T.toFixed(1)}°</b><br><span style="font-size:11px;color:var(--muted2)">${src}</span>`;
     const d=ang-T;
     if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';big.style.fill='#12a046';}
     else{del.textContent=`gira ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';big.style.fill='#1b2531';}
   }else{
-    tm.style.display='none'; del.textContent=''; big.style.fill='#1b2531';
+    del.textContent=''; big.style.fill='#1b2531';
     tgt.textContent= incMsg||'Selecciona un punto para ver la elevación objetivo.';
   }
 }
