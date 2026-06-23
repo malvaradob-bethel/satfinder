@@ -165,11 +165,19 @@
   .inclevel .lvtarget{position:absolute;left:50%;top:50%;width:66px;height:66px;margin:-33px 0 0 -33px;border:1px solid var(--muted2);border-radius:50%}
   .inclevel .lvbub{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:var(--ok);box-shadow:0 0 12px rgba(55,201,138,.55);transition:transform .07s linear,background .2s}
   .incgauge{width:100%;max-width:290px;display:block;margin:0 auto 8px}
-  .incgauge .gaugenum{fill:#16202e;font:700 32px var(--mono)}
-  .incgauge .gaugedeg{fill:#16202e;font:700 17px var(--mono)}
-  .incgauge text.tk{fill:#aeb9c7;font:700 12px var(--mono)}
-  .incgauge line.tick{stroke:#5d6b7c;stroke-width:1.5}
-  .incgauge line.tickmaj{stroke:#aeb9c7;stroke-width:2.5}
+  .incgauge .gaugenum{fill:#1b2531;font:800 30px var(--mono)}
+  .incgauge .gaugedeg{fill:#1b2531;font:800 15px var(--mono)}
+  .incgauge text.tk{fill:#2b333c;font-weight:800;font-family:var(--mono)}
+  .incgauge line.tick{stroke:#a7afb9;stroke-width:1}
+  .incgauge line.tickmid{stroke:#69727e;stroke-width:1.4}
+  .incgauge line.tickmaj{stroke:#2b333c;stroke-width:2.6}
+  .incgauge line.tickpct{stroke:#b4bcc6;stroke-width:1}
+  #incScaleRot{transform-box:view-box;transform-origin:120px 120px;transition:transform .55s cubic-bezier(.34,.08,.18,1)}
+  .increftoggle{display:flex;align-items:center;justify-content:center;gap:9px;margin:8px 0}
+  .reftogglebtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#161d28;color:#cdd6e2;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s,background .2s}
+  .reftogglebtn:active{transform:scale(.92)}
+  .reftogglebtn[aria-pressed="true"]{background:#1d2735;color:#7fd6ff;border-color:#2e4256}
+  .refstate{font:700 12px var(--mono);color:var(--muted2);min-width:74px}
   .btn.freeze{display:block;width:100%;margin:0 0 12px}
   .btn.freeze.on{background:var(--warn);color:#10151f;border-color:var(--warn)}
   .incbtns{display:flex;gap:9px;margin:14px 0 6px}
@@ -359,28 +367,59 @@
         <div class="incmodetag" id="incModeTag">CLINÓMETRO</div>
         <div id="incAngleView">
         <svg class="incgauge" viewBox="0 0 240 240" aria-label="Inclinómetro">
-          <circle cx="120" cy="120" r="118" fill="#0e1420" stroke="#39434f" stroke-width="4"/>
-          <circle cx="120" cy="120" r="112" fill="rgba(17,25,36,.6)" stroke="#222c3a" stroke-width="2"/>
-          <g id="incScale"></g>
+          <defs>
+            <radialGradient id="igFace" cx="50%" cy="38%" r="78%">
+              <stop offset="0%" stop-color="#ffffff"/><stop offset="60%" stop-color="#f3f5f8"/><stop offset="100%" stop-color="#d2d8e0"/>
+            </radialGradient>
+            <linearGradient id="igBezel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#eef1f5"/><stop offset="22%" stop-color="#b8c1cc"/><stop offset="50%" stop-color="#6e7884"/><stop offset="78%" stop-color="#aeb8c4"/><stop offset="100%" stop-color="#3f4750"/>
+            </linearGradient>
+            <linearGradient id="igCap" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ffffff"/><stop offset="46%" stop-color="#eef1f5"/><stop offset="54%" stop-color="#d6dce3"/><stop offset="100%" stop-color="#b6bec9"/>
+            </linearGradient>
+            <linearGradient id="igVial" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#fbfcfd"/><stop offset="100%" stop-color="#ccd3db"/>
+            </linearGradient>
+            <linearGradient id="igNeedle" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#ff5a5f"/><stop offset="100%" stop-color="#c00f18"/>
+            </linearGradient>
+            <radialGradient id="igPivot" cx="38%" cy="32%" r="80%">
+              <stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="#c7ced6"/><stop offset="100%" stop-color="#7d8893"/>
+            </radialGradient>
+            <filter id="igShadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="1.4" stdDeviation="1.5" flood-color="#000" flood-opacity="0.3"/>
+            </filter>
+          </defs>
+          <circle cx="120" cy="120" r="119" fill="url(#igBezel)"/>
+          <circle cx="120" cy="120" r="110" fill="#2b333c"/>
+          <circle cx="120" cy="120" r="107" fill="url(#igFace)"/>
+          <g id="incScaleRot"><g id="incScale"></g></g>
+          <g id="incLabels"></g>
           <g id="incTgtMark" style="display:none"></g>
           <g id="incInd">
-            <polygon id="incNeedle" points="120,22 114,100 126,100" fill="var(--vector)"/>
-            <rect x="78" y="101" width="84" height="38" rx="11" fill="#f4f6f9" stroke="#aab4c0" stroke-width="1.5"/>
-            <rect x="44" y="108" width="26" height="24" rx="5" fill="#e9edf2" stroke="#94a0ae" stroke-width="1"/>
-            <line x1="48" y1="120" x2="66" y2="120" stroke="#e0353f" stroke-width="1.4"/>
-            <rect x="170" y="108" width="26" height="24" rx="5" fill="#e9edf2" stroke="#94a0ae" stroke-width="1"/>
-            <line x1="174" y1="120" x2="192" y2="120" stroke="#e0353f" stroke-width="1.4"/>
+            <polygon id="incNeedle" points="120,24 116,128 124,128" fill="url(#igNeedle)" filter="url(#igShadow)"/>
+            <g filter="url(#igShadow)">
+              <rect x="40" y="105" width="33" height="30" rx="7" fill="url(#igVial)" stroke="#9aa6b4" stroke-width="1"/>
+              <line x1="45" y1="120" x2="68" y2="120" stroke="#e0353f" stroke-width="1.6"/>
+              <rect x="167" y="105" width="33" height="30" rx="7" fill="url(#igVial)" stroke="#9aa6b4" stroke-width="1"/>
+              <line x1="172" y1="120" x2="195" y2="120" stroke="#e0353f" stroke-width="1.6"/>
+              <rect x="73" y="100" width="94" height="40" rx="14" fill="url(#igCap)" stroke="#9aa6b4" stroke-width="1.2"/>
+              <rect x="77" y="103" width="86" height="15" rx="8" fill="#ffffff" opacity="0.5"/>
+            </g>
+            <text id="incBig" x="116" y="129" text-anchor="middle" class="gaugenum">90.0</text>
+            <text id="incDeg" x="158" y="110" text-anchor="middle" class="gaugedeg">°</text>
           </g>
-          <text id="incBig" x="118" y="130" text-anchor="middle" class="gaugenum">90</text>
-          <text id="incDeg" x="151" y="116" text-anchor="middle" class="gaugedeg">°</text>
-          <polygon points="120,6 113,19 127,19" fill="#cdd6e2"/>
+          <circle cx="120" cy="120" r="6" fill="url(#igPivot)" stroke="#6b7682" stroke-width="0.8"/>
+          <polygon points="120,4 112,19 128,19" fill="#2b333c"/>
         </svg>
         <button class="btn freeze" id="incFreeze">⏸ Congelar lectura</button>
         <div class="incread">
           <div class="incsub">teléfono de plano mirándote · gíralo sobre su centro</div>
-          <div class="increfbtns" id="incRefBtns">
-            <button data-r="horizontal" class="on">0° = horizontal</button>
-            <button data-r="vertical">0° = vertical</button>
+          <div class="increftoggle">
+            <button id="incRefToggle" class="reftogglebtn" title="Girar referencia 90°" aria-pressed="false">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 5V2L7.5 6.5 12 11V7.5a4.5 4.5 0 1 1-4.5 4.5H5A7 7 0 1 0 12 5z" fill="currentColor"/></svg>
+            </button>
+            <span class="refstate" id="incRefState">90° arriba</span>
           </div>
           <div class="inctgt" id="incTgt">Selecciona un punto para ver la elevación objetivo.</div>
           <div class="incdelta" id="incDelta"></div>
@@ -812,21 +851,44 @@ function rawTilt(){ return clinoReading(); }
 function mechTarget(){ if(incElev==null)return null; const m=incElev-incOffset;
   const v=incZeroRef==='vertical' ? (90-m) : m; return Math.max(0,Math.min(90,v)); }
 function effTarget(){ return incTgtManual!=null? incTgtManual : mechTarget(); }
-// Escala FIJA de fondo (no gira). 90 arriba (horizontal) ó 0 arriba (vertical). Etiquetas cada 30°.
+// Escala: ticks finos (cada 3°), medios (15°) y mayores (45°) + arco interno de %.
+// Los ticks viven en #incScaleRot (gira 90° al cambiar de referencia). Las etiquetas (90/45/0)
+// se reconstruyen verticales según el modo para que siempre se lean derechas.
 function buildIncScale(){
-  const g=document.getElementById('incScale'); if(!g)return; g.innerHTML='';
-  const NS='http://www.w3.org/2000/svg', C=120;
-  for(let s=0;s<360;s+=10){
-    const maj=(s%30===0), r1=104, r2=maj?90:98, a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
-    const ln=document.createElementNS(NS,'line');
-    ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
-    ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
-    ln.setAttribute('class',maj?'tickmaj':'tick'); g.appendChild(ln);
-    if(maj){ let v=90-Math.abs(90-(s%180)); if(incZeroRef==='vertical') v=90-v;
-      const t=document.createElementNS(NS,'text');
-      t.setAttribute('x',(C+76*cx).toFixed(1)); t.setAttribute('y',(C-76*sy+4).toFixed(1));
-      t.setAttribute('text-anchor','middle'); t.setAttribute('class','tk'); t.textContent=v; g.appendChild(t);}
+  const sc=document.getElementById('incScale'), lb=document.getElementById('incLabels');
+  if(!sc||!lb)return; const NS='http://www.w3.org/2000/svg', C=120;
+  if(!sc.childElementCount){
+    for(let s=0;s<360;s+=3){
+      const maj=(s%45===0), mid=(s%15===0), r1=105, r2=maj?87:(mid?94:100);
+      const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
+      const ln=document.createElementNS(NS,'line');
+      ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
+      ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
+      ln.setAttribute('class',maj?'tickmaj':(mid?'tickmid':'tick')); sc.appendChild(ln);
+    }
+    for(let s=18;s<=162;s+=6){ if(s>=84&&s<=96)continue;
+      const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a), r1=79,r2=(s%18===0)?71:74;
+      const ln=document.createElementNS(NS,'line');
+      ln.setAttribute('x1',(C+r1*cx).toFixed(1)); ln.setAttribute('y1',(C-r1*sy).toFixed(1));
+      ln.setAttribute('x2',(C+r2*cx).toFixed(1)); ln.setAttribute('y2',(C-r2*sy).toFixed(1));
+      ln.setAttribute('class','tickpct'); sc.appendChild(ln);
+    }
   }
+  lb.innerHTML=''; const vert=incZeroRef==='vertical';
+  const top=vert?'0°':'90°', side=vert?'90°':'0°';
+  const defs=[[90,top,18,70],[270,top,18,70],[45,'45°',13,84],[135,'45°',13,84],[225,'45°',13,84],[315,'45°',13,84],[0,side,15,92],[180,side,15,92]];
+  defs.forEach(([s,txt,fs,R])=>{ const a=s*Math.PI/180, cx=Math.cos(a), sy=Math.sin(a);
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',(C+R*cx).toFixed(1)); t.setAttribute('y',(C-R*sy+fs*0.35).toFixed(1));
+    t.setAttribute('text-anchor','middle'); t.setAttribute('class','tk'); t.setAttribute('style','font-size:'+fs+'px');
+    t.textContent=txt; lb.appendChild(t); });
+}
+function setIncRef(ref){
+  incZeroRef=ref;
+  const r=document.getElementById('incScaleRot'); if(r) r.style.transform='rotate('+(ref==='vertical'?90:0)+'deg)';
+  const tb=document.getElementById('incRefToggle'); if(tb) tb.setAttribute('aria-pressed', ref==='vertical');
+  const st=document.getElementById('incRefState'); if(st) st.textContent= ref==='vertical'?'0° arriba':'90° arriba';
+  buildIncScale(); drawInc();
 }
 function showIncView(){
   const clino=incView==='clino';
@@ -850,27 +912,27 @@ function drawInc(){
   const ang=incLastAng, roll=incLastRoll;
   document.getElementById('incInd').setAttribute('transform',`rotate(${roll.toFixed(1)} 120 120)`);
   const big=document.getElementById('incBig');
-  const disp=Math.round(ang*2)/2; big.textContent=Number.isInteger(disp)?String(disp):disp.toFixed(1);
+  const disp=Math.round(ang*2)/2; big.textContent=disp.toFixed(1);
   const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta'),tm=document.getElementById('incTgtMark');
   const T=effTarget();
   if(T!=null){
     const phi=(incZeroRef==='vertical')?T:(90-T);
     tm.style.display='';
-    tm.innerHTML=`<polygon points="120,14 113,30 127,30" fill="var(--ok)" transform="rotate(${phi.toFixed(1)} 120 120)"/><polygon points="120,14 113,30 127,30" fill="var(--ok)" transform="rotate(${(-phi).toFixed(1)} 120 120)"/>`;
+    tm.innerHTML=`<polygon points="120,13 112,31 128,31" fill="#12a046" stroke="#0c7a34" stroke-width="0.6" transform="rotate(${phi.toFixed(1)} 120 120)"/><polygon points="120,13 112,31 128,31" fill="#12a046" stroke="#0c7a34" stroke-width="0.6" transform="rotate(${(-phi).toFixed(1)} 120 120)"/>`;
     const src= incTgtManual!=null? 'fijado manual' : `${SATS[active].name}: elev ${incElev.toFixed(0)}° − offset ${incOffset.toFixed(1)}°`;
     tgt.innerHTML=`Objetivo: <b>${T.toFixed(1)}°</b><br><span style="font-size:11px;color:var(--muted2)">${src}</span>`;
     const d=ang-T;
-    if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';big.style.fill='#1aa84f';}
-    else{del.textContent=`gira ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';big.style.fill='#16202e';}
+    if(Math.abs(d)<0.7){del.textContent='¡Coincide! ✓';del.style.color='var(--ok)';big.style.fill='#12a046';}
+    else{del.textContent=`gira ${Math.abs(d).toFixed(1)}°`;del.style.color='var(--warn)';big.style.fill='#1b2531';}
   }else{
-    tm.style.display='none'; del.textContent=''; big.style.fill='#16202e';
+    tm.style.display='none'; del.textContent=''; big.style.fill='#1b2531';
     tgt.textContent= incMsg||'Selecciona un punto para ver la elevación objetivo.';
   }
 }
 function openInc(){
   incElev=null; incMsg=''; incFrozen=false; incView='clino';
   const fb=document.getElementById('incFreeze'); fb.classList.remove('on'); fb.textContent='⏸ Congelar lectura';
-  buildIncScale(); showIncView();
+  buildIncScale(); setIncRef(incZeroRef); showIncView();
   if(pt){const el=lookAngles(pt.lat,pt.lng,SATS[active].lon).el; if(el>0)incElev=el; else incMsg=`${SATS[active].name} está bajo el horizonte en este punto.`;}
   incOverlay.classList.add('show'); drawInc(); reqIncPerm();
 }
@@ -882,9 +944,8 @@ document.getElementById('incEnable').onclick=reqIncPerm;
 document.getElementById('incModeBtns').addEventListener('click',e=>{
   const b=e.target.closest('button[data-v]'); if(!b)return; incView=b.dataset.v; showIncView(); drawInc();
 });
-document.getElementById('incRefBtns').addEventListener('click',e=>{
-  const b=e.target.closest('button[data-r]'); if(!b)return; incZeroRef=b.dataset.r;
-  document.querySelectorAll('#incRefBtns button').forEach(x=>x.classList.toggle("on",x===b)); buildIncScale(); drawInc();
+document.getElementById('incRefToggle').addEventListener('click',()=>{
+  setIncRef(incZeroRef==='vertical'?'horizontal':'vertical');
 });
 document.getElementById('incFreeze').onclick=()=>{
   incFrozen=!incFrozen; const b=document.getElementById('incFreeze');
