@@ -838,7 +838,7 @@ function reqIncPerm(){
 // ---- Modelo del clinómetro (vector de gravedad, estable en vertical) ----
 // Dirección de la gravedad DENTRO del plano de la pantalla = giro del teléfono mirándote.
 // Ignora el cabeceo (componente fuera del plano), por eso inclinar la cara no afecta.
-function clinoRoll(){ return Math.atan2(gAx, -gAy)*180/Math.PI; } // -180..180
+function clinoRoll(){ return Math.atan2(gAx, gAy)*180/Math.PI; } // 0 = teléfono vertical (portrait); ±90 = horizontal
 function readForRoll(roll){ let r=Math.abs(roll); if(r>90) r=180-r; return incZeroRef==='vertical'? r : (90-r); }
 function clinoReading(){ return readForRoll(clinoRoll()); }
 function rawTilt(){ return clinoReading(); }
@@ -901,7 +901,7 @@ function drawInc(){
   const ip=Math.hypot(gAx,gAy);
   if(ip>=1.2){ incLastRoll=clinoRoll(); incLastAng=clinoReading(); }
   const ang=incLastAng;
-  let roll=incLastRoll; if(roll>90)roll-=180; else if(roll<-90)roll+=180; // plegado a ±90
+  const roll=incLastRoll; // continuo: 0 en vertical, crece hacia horizontal sin saltos
   document.getElementById('incInd').setAttribute('transform',`rotate(${(-roll).toFixed(1)} 120 120)`); // contra-giro: cápsula siempre horizontal
   const big=document.getElementById('incBig');
   const disp=Math.round(ang*2)/2; big.textContent=disp.toFixed(1);
