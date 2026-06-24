@@ -4,7 +4,7 @@
   "description": "Apuntamiento de antenas satelitales · Unidad Técnica Bethel",
   "lang": "es",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait",
   "background_color": "#0c1118",
   "theme_color": "#0c1118",
   "start_url": ".",
