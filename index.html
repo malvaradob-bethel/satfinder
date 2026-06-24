@@ -6,8 +6,11 @@
 <meta name="theme-color" content="#0c1118" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Apuntar Sat" />
+<meta name="apple-mobile-web-app-title" content="Dishpointer" />
 <title>Dishpointer Bethel · Unidad Técnica</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
@@ -970,20 +973,6 @@ document.getElementById('offCalcUse').onclick=()=>{
 };
 
 /* ===================== PWA + SW ===================== */
-(function(){try{
-  const c=document.createElement('canvas');c.width=c.height=512;const x=c.getContext('2d');
-  x.fillStyle='#0c1118';x.fillRect(0,0,512,512);x.strokeStyle='#ff1f3d';x.lineWidth=26;x.lineCap='round';
-  x.beginPath();x.arc(256,300,150,Math.PI*1.15,Math.PI*1.85);x.stroke();
-  x.beginPath();x.moveTo(256,300);x.lineTo(360,150);x.stroke();
-  x.fillStyle='#f5b301';x.beginPath();x.arc(360,150,30,0,7);x.fill();
-  const icon=c.toDataURL('image/png');
-  const man={name:'Dishpointer Bethel',short_name:'Dishpointer',display:'standalone',
-    background_color:'#0c1118',theme_color:'#0c1118',start_url:'.',
-    icons:[{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
-  const url=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
-  const l=document.createElement('link');l.rel='manifest';l.href=url;document.head.appendChild(l);
-  const al=document.createElement('link');al.rel='apple-touch-icon';al.href=icon;document.head.appendChild(al);
-}catch(e){}})();
 if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
 
 /* init */

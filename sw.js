@@ -3,11 +3,14 @@
    - SHELL (app + Leaflet): cache-first, se precachea al instalar.
    - TILES (teselas del mapa): cache-first; se guardan al vuelo y vía "Descargar zona".
    Los nombres de caché coinciden con los usados por la página (gestión de caché). */
-const SHELL = 'apsat-shell-v3';
+const SHELL = 'apsat-shell-v4';
 const TILES = 'apsat-tiles-v1';
 
 const SHELL_URLS = [
   './', './index.html', './satellites.json',
+  './manifest.webmanifest',
+  './icon-192.png', './icon-512.png', './icon-maskable-512.png',
+  './apple-touch-icon.png', './favicon.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
