@@ -902,7 +902,7 @@ function drawInc(){
   if(ip>=1.2){ incLastRoll=clinoRoll(); incLastAng=clinoReading(); }
   const ang=incLastAng;
   const roll=incLastRoll; // continuo: 0 en vertical, crece hacia horizontal sin saltos
-  document.getElementById('incInd').setAttribute('transform',`rotate(${(-roll).toFixed(1)} 120 120)`); // contra-giro: cápsula siempre horizontal
+  document.getElementById('incInd').setAttribute('transform',`rotate(${roll.toFixed(1)} 120 120)`); // contra-giro (opuesto al teléfono): cápsula siempre horizontal
   const big=document.getElementById('incBig');
   const disp=Math.round(ang*2)/2; big.textContent=disp.toFixed(1);
   const tgt=document.getElementById('incTgt'),del=document.getElementById('incDelta');
