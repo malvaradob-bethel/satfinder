@@ -25,8 +25,10 @@
   #map{position:absolute;inset:0;background:#0a0e14}
 
   .topbar{position:absolute;top:0;left:0;right:0;z-index:1200;display:flex;align-items:center;gap:8px;
-    padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;
-    background:linear-gradient(180deg,rgba(8,11,16,.92),rgba(8,11,16,0));pointer-events:none}
+    padding:calc(env(safe-area-inset-top) + 10px) 12px 12px;
+    background:linear-gradient(180deg,rgba(8,11,16,.96) 60%,rgba(8,11,16,0) 100%);pointer-events:none}
+  .topbar::before{content:'';position:absolute;left:0;right:0;top:0;height:max(env(safe-area-inset-top),0px);
+    background:#080b10;pointer-events:none}
   .brand{display:flex;align-items:center;gap:8px;pointer-events:auto}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--vector);box-shadow:0 0 10px var(--vector)}
   .topbar h1{margin:0;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
